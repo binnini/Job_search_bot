@@ -1,8 +1,8 @@
 # 채용 공고 검색 디스코드 봇
 
 <div align="center">
-  <img src="img/JobSearchBot/1.png" alt="봇 사용 예시 1" width="400"/>
-  <img src="img/JobSearchBot/2.png" alt="봇 사용 예시 2" width="400"/>
+  <img src="img/job_search_bot1.png" alt="봇 사용 예시 1" width="600"/>
+  <img src="img/job_search_bot2.png" alt="봇 사용 예시 2" width="600"/>
 </div>
 
 ## 📝 요약

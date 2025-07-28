@@ -47,3 +47,38 @@ DISCORD_TOKEN=your_discord_token
 
 # CSV 저장 경로
 RECRUIT_CSV_PATH=/home/youruser/jobkorea_data.csv
+
+### 2. systemd.txt 사용법 (FastAPI + Discord 봇 자동 실행)
+Linux 서버에서 FastAPI 서버 및 Discord 봇을 systemd 서비스로 등록하여 자동 실행할 수 있습니다.
+
+📄 유닛 파일 생성
+bash
+복사
+편집
+# systemd 유닛 파일 생성
+sudo nano /etc/systemd/system/fastapi.service
+sudo nano /etc/systemd/system/discord_bot.service
+🔁 유닛 파일 적용
+bash
+복사
+편집
+# systemd 설정 리로드
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+🚀 서비스 등록 및 실행
+bash
+복사
+편집
+# 부팅 시 자동 실행 설정
+sudo systemctl enable fastapi
+sudo systemctl enable discord_bot
+
+# 즉시 실행
+sudo systemctl start fastapi
+sudo systemctl start discord_bot
+🩺 서비스 상태 확인
+bash
+복사
+편집
+sudo systemctl status fastapi
+sudo systemctl status discord_bot

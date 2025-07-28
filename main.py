@@ -13,7 +13,8 @@ if __name__ == "__main__":
     load_dotenv(override=True)
 
     try:
-        scraper.run_crawler_with_retry(max_retries=3)
+        # Crawling Code
+        # scraper.run_crawler_with_retry(max_retries=3)
     
         # Postgre DB
         base_path = os.getenv("RECRUIT_CSV_PATH")

@@ -1,0 +1,15 @@
+# systemd 유닛 파일 경로
+sudo nano /etc/systemd/system/fastapi.service
+sudo nano /etc/systemd/system/discord_bot.service
+
+# systemd 리로드
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+
+# 서비스 등록 (재부팅 후 자동 시작)
+sudo systemctl enable fastapi
+sudo systemctl enable discord_bot
+
+# 서비스 즉시 시작
+sudo systemctl start fastapi
+sudo systemctl start discord_bot

@@ -1,0 +1,27 @@
+# 데이터 파일
+*.csv
+
+# 환경 설정 파일
+.env
+
+# FAISS 인덱스 파일
+*.faiss
+
+# 파이썬 피클 파일
+*.pkl
+
+# __pycache__ 및 기타 Python 빌드 아티팩트
+__pycache__/
+*.py[cod]
+*.so
+
+# Jupyter Notebook 체크포인트
+.ipynb_checkpoints/
+
+# VSCode 설정 등 편집기 관련
+.vscode/
+*.code-workspace
+
+# OS/편집기 생성 파일
+.DS_Store
+Thumbs.db

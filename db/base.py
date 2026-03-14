@@ -146,7 +146,8 @@ def create_tables(conn, cursor):
 # DATA INSERTION
 # ──────────────────────────────
 def batch_to_db(data_batch):
-    """크롤링된 배치 데이터를 직접 DB에 삽입. data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, link] 리스트의 리스트."""
+    """크롤링된 배치 데이터를 직접 DB에 삽입.
+    data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, position, link] 리스트의 리스트."""
     conn = connect_postgres()
     try:
         cursor = conn.cursor()
@@ -155,7 +156,10 @@ def batch_to_db(data_batch):
 
         for i, row in enumerate(data_batch):
             try:
-                company, title, career, education, emp_type, location, salary, deadline, description, link = row
+                company, title, career, education, emp_type, location, salary, deadline, description, position, link = row
+                desc_tags = JobPreprocessor.parse_explanation(description) or []
+                pos_tags = [t.strip() for t in position.replace('·', ',').split(',') if t.strip()] if position else []
+                all_tags = desc_tags + [t for t in pos_tags if t not in desc_tags]
                 _jobkorea_write(
                     conn=conn,
                     cursor=cursor,
@@ -167,7 +171,7 @@ def batch_to_db(data_batch):
                     region=JobPreprocessor.parse_region(location),
                     annual_salary=JobPreprocessor.parse_salary(salary),
                     deadline=JobPreprocessor.parse_deadline(deadline),
-                    tags=JobPreprocessor.parse_explanation(description),
+                    tags=all_tags or None,
                     link=link,
                 )
             except Exception as e:

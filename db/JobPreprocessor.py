@@ -194,8 +194,8 @@ class JobPreprocessor:
         if not value or not isinstance(value, str):
             return None
 
-        # 쉼표 기준 분리 후 각 항목 내 모든 공백 제거
-        tags = [tag.replace(" ", "").strip() for tag in value.split(',') if tag.strip()]
+        # 쉼표 기준 분리 후 좌우 공백만 제거 (내부 공백 유지)
+        tags = [tag.strip() for tag in value.split(',') if tag.strip()]
         
         return tags if tags else None
     

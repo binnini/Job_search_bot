@@ -100,12 +100,13 @@ def search_recruits_by_filter(
         )
 
         if keyword:
-            query = query.filter(
-                or_(
-                    Recruit.announcement_name.ilike(f"%{keyword}%"),
-                    Recruit.tags.any(Tag.name.ilike(f"%{keyword}%")),
+            for token in keyword.split():
+                query = query.filter(
+                    or_(
+                        Recruit.announcement_name.ilike(f"%{token}%"),
+                        Recruit.tags.any(Tag.name.ilike(f"%{token}%")),
+                    )
                 )
-            )
         if min_deadline:
             query = query.filter(Recruit.deadline >= min_deadline)
         if min_annual_salary:

@@ -109,7 +109,7 @@ def crawl_jobkorea_multiple_pages():
 
                         data_batch.append([
                             company, title, career, education, emp_type,
-                            location, salary, deadline, description, link
+                            location, salary, deadline, description, position, link
                         ])
                         total_items += 1
                         logging.info(f"{total_items:04d} | {company} | {title} | {time_text}")

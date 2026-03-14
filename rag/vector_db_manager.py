@@ -15,11 +15,22 @@ INDEX_PATH = os.getenv("INDEX_PATH")
 INDEX_DIR = str(Path(INDEX_PATH).parent)
 INDEX_FILE = Path(INDEX_PATH)
 
+# 앱 기동 시 1회 로드 후 메모리에 유지 — 매 검색마다 디스크 I/O 방지
+_vector_store = None
+
+def get_vector_store():
+    global _vector_store
+    if _vector_store is None:
+        _vector_store = load_vectorDB()
+    return _vector_store
+
 def add_embedding(data):
+    global _vector_store
     vector_store = load_vectorDB()
     vector_store = filter_expired_documents(vector_store)
-    vector_store = add_documents(vector_store,data)
+    vector_store = add_documents(vector_store, data)
     vector_store.save_local(INDEX_DIR)
+    _vector_store = vector_store  # 캐시 갱신
 
 def load_vectorDB():
     embeddings  = HuggingFaceEmbeddings(model_name="snunlp/KR-SBERT-V40K-klueNLI-augSTS")
@@ -86,8 +97,8 @@ def filter_expired_documents(vector_store):
 
     return vector_store
 
-def vector_similar_search(query,filter,k):
-    vector_store = load_vectorDB()
+def vector_similar_search(query, filter, k):
+    vector_store = get_vector_store()
     retriever = vector_store.as_retriever(
         search_type="mmr",
         search_kwargs={"k": k},

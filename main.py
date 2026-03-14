@@ -6,7 +6,6 @@ from db import base, io
 import logs.log as log
 import logging
 from rag.vector_db_manager import add_embedding
-import pandas as pd
 
 if __name__ == "__main__":
     logging.info("프로그램 시작됨")
@@ -15,7 +14,7 @@ if __name__ == "__main__":
     try:
         # Crawling Code
         # scraper.run_crawler_with_retry(max_retries=3)
-    
+
         # Postgre DB
         base_path = os.getenv("RECRUIT_CSV_PATH")
         dir_path = os.path.dirname(base_path)
@@ -24,10 +23,8 @@ if __name__ == "__main__":
         full_csv_path = os.path.join(dir_path, csv_filename)
         base.csv_to_db(full_csv_path)
 
-        # FAISS DB
-        df = pd.read_csv(full_csv_path)
-        limit = len(df)-1
-        data = io.read_recruitOut(limit=limit, order_desc=True)
+        # FAISS DB — DB에서 직접 조회하여 CSV 재읽기 제거
+        data = io.read_recruitOut(order_desc=True)
         add_embedding(data)
         # io.export_titles_to_json()
     except KeyboardInterrupt:

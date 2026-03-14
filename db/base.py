@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2 import pool
 from dotenv import load_dotenv
 import os
 from .JobPreprocessor import JobPreprocessor
@@ -9,21 +10,37 @@ import logging
 load_dotenv()
 
 # ──────────────────────────────
-# DATABASE CONNECTION
+# CONNECTION POOL
 # ──────────────────────────────
+_connection_pool = None
+
+def init_connection_pool():
+    global _connection_pool
+    _connection_pool = pool.SimpleConnectionPool(
+        minconn=1,
+        maxconn=10,
+        host=os.getenv("POSTGRES_HOST"),
+        port=os.getenv("POSTGRES_PORT"),
+        dbname=os.getenv("POSTGRES_DB"),
+        user=os.getenv("POSTGRES_USER"),
+        password=os.getenv("POSTGRES_PASSWORD"),
+    )
+    logging.info("Connection Pool 초기화 완료")
+
 def connect_postgres():
+    global _connection_pool
     try:
-        conn = psycopg2.connect(
-            host=os.getenv("POSTGRES_HOST"),
-            port=os.getenv("POSTGRES_PORT"),
-            dbname=os.getenv("POSTGRES_DB"),
-            user=os.getenv("POSTGRES_USER"),
-            password=os.getenv("POSTGRES_PASSWORD")
-        )
-        return conn
+        if _connection_pool is None:
+            init_connection_pool()
+        return _connection_pool.getconn()
     except psycopg2.OperationalError as e:
         logging.error(f"PostgreSQL 연결 실패: {e}")
         raise
+
+def release_connection(conn):
+    global _connection_pool
+    if _connection_pool and conn:
+        _connection_pool.putconn(conn)
 
 # ──────────────────────────────
 # TABLE CREATION & RESET
@@ -129,32 +146,36 @@ def create_tables(conn, cursor):
 # DATA INSERTION
 # ──────────────────────────────
 def csv_to_db(csv_path):
-    # 🔹 테이블이 없다면 생성
     conn = connect_postgres()
-    cursor = conn.cursor()
-    create_tables(conn, cursor)
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        create_tables(conn, cursor)
+        conn.commit()
 
-    with open(csv_path, newline='', encoding='utf-8-sig') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for i, row in enumerate(reader):
-            try:
-                logging.info(f"{i}번째 행 입력")
-                _jobkorea_write(
-                    company_name=row['기업명'],
-                    announcement_name=row['공고명'],
-                    experience=JobPreprocessor.parse_experience(row['경력']),
-                    education=JobPreprocessor.parse_education(row['학력']),
-                    form=JobPreprocessor.parse_form(row['형태']),
-                    region=JobPreprocessor.parse_region(row['지역']),
-                    annual_salary=JobPreprocessor.parse_salary(row['연봉']),
-                    deadline=JobPreprocessor.parse_deadline(row['마감일']),
-                    tags=JobPreprocessor.parse_explanation(row['설명']),
-                    link=row['링크'],
-                )
-            except Exception as e:
-                logging.warning(f"{i}번째 행 처리 실패: {e}")
+        with open(csv_path, newline='', encoding='utf-8-sig') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for i, row in enumerate(reader):
+                try:
+                    logging.info(f"{i}번째 행 입력")
+                    _jobkorea_write(
+                        conn=conn,
+                        cursor=cursor,
+                        company_name=row['기업명'],
+                        announcement_name=row['공고명'],
+                        experience=JobPreprocessor.parse_experience(row['경력']),
+                        education=JobPreprocessor.parse_education(row['학력']),
+                        form=JobPreprocessor.parse_form(row['형태']),
+                        region=JobPreprocessor.parse_region(row['지역']),
+                        annual_salary=JobPreprocessor.parse_salary(row['연봉']),
+                        deadline=JobPreprocessor.parse_deadline(row['마감일']),
+                        tags=JobPreprocessor.parse_explanation(row['설명']),
+                        link=row['링크'],
+                    )
+                except Exception as e:
+                    conn.rollback()
+                    logging.warning(f"{i}번째 행 처리 실패: {e}")
+    finally:
+        release_connection(conn)
 
 def _ensure_company_and_get_id(cursor, company_name):
     cursor.execute("""
@@ -220,6 +241,8 @@ def _ensure_subregion_and_get_id(cursor, region_name, subregion_name):
 
 
 def _jobkorea_write(
+    conn,
+    cursor,
     company_name,
     announcement_name,
     experience,
@@ -231,38 +254,19 @@ def _jobkorea_write(
     tags,
     link
 ):
-    conn = None
-    try:
-        conn = connect_postgres()
-        cursor = conn.cursor()
+    # 1. 회사 ID 확보
+    company_id = _ensure_company_and_get_id(cursor, company_name)
 
-        # 1. 회사 ID 확보
-        company_id = _ensure_company_and_get_id(cursor, company_name)
+    # 2. 지역 ID 확보
+    if region and isinstance(region, tuple) and len(region) == 2 and region[1]:
+        region_name, subregion_name = region
+        subregion_id = _ensure_subregion_and_get_id(cursor, region_name, subregion_name)
+    else:
+        subregion_id = None
 
-        # 2. 지역 ID 확보
-        # print(company_name," 지역 : ",region)
-        if region and isinstance(region, tuple) and len(region) == 2 and region[1]:
-            region_name, subregion_name = region
-            subregion_id = _ensure_subregion_and_get_id(cursor, region_name, subregion_name)
-        else:
-            subregion_id = None
-
-        # 3. recruits 테이블에 삽입
-        cursor.execute("""
-            INSERT INTO recruits (
-                company_id,
-                announcement_name,
-                experience,
-                education,
-                form,
-                subregion_id,
-                annual_salary,
-                deadline,
-                link
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (company_id, announcement_name, deadline) DO NOTHING
-            RETURNING id
-        """, (
+    # 3. recruits 테이블에 삽입
+    cursor.execute("""
+        INSERT INTO recruits (
             company_id,
             announcement_name,
             experience,
@@ -272,31 +276,34 @@ def _jobkorea_write(
             annual_salary,
             deadline,
             link
-        ))
-        result = cursor.fetchone()
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (company_id, announcement_name, deadline) DO NOTHING
+        RETURNING id
+    """, (
+        company_id,
+        announcement_name,
+        experience,
+        education,
+        form,
+        subregion_id,
+        annual_salary,
+        deadline,
+        link
+    ))
+    result = cursor.fetchone()
 
-        # 4. 태그 연결
-        if result:
-            recruit_id = result[0]
-            if tags:
-                for tag in tags:
-                    tag_id = _ensure_tag_and_get_id(cursor, tag)
-                    cursor.execute("""
-                        INSERT INTO recruit_tags (recruit_id, tag_id)
-                        VALUES (%s, %s)
-                        ON CONFLICT DO NOTHING
-                    """, (recruit_id, tag_id))
-        else:
-            logging.info(f"[SKIPPED - DUPLICATE] {company_name} / {announcement_name} / {deadline} 은 이미 존재하여 삽입되지 않았습니다.")
+    # 4. 태그 연결
+    if result:
+        recruit_id = result[0]
+        if tags:
+            for tag in tags:
+                tag_id = _ensure_tag_and_get_id(cursor, tag)
+                cursor.execute("""
+                    INSERT INTO recruit_tags (recruit_id, tag_id)
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING
+                """, (recruit_id, tag_id))
+    else:
+        logging.info(f"[SKIPPED - DUPLICATE] {company_name} / {announcement_name} / {deadline} 은 이미 존재하여 삽입되지 않았습니다.")
 
-        conn.commit()
-
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        logging.error(f"_jobkorea_write 중 오류 발생: {e}")
-        raise
-
-    finally:
-        if conn:
-            conn.close()
+    conn.commit()

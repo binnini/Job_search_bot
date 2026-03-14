@@ -1,6 +1,8 @@
 import os
 import math
 import logging
+import re
+from datetime import date, datetime
 from dotenv import load_dotenv
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -14,7 +16,22 @@ load_dotenv(override=True)
 TARGET_URL = os.getenv("TARGET_URL")
 
 
-def crawl_jobkorea_multiple_pages():
+def _posted_within_days(time_text: str, days: int) -> bool:
+    """등록 시간 텍스트가 days일 이내인지 판별."""
+    if "분 전 등록" in time_text or "시간 전 등록" in time_text:
+        return True
+    m = re.search(r'(\d{2})/(\d{2})', time_text)
+    if m:
+        today = date.today()
+        month, day = int(m.group(1)), int(m.group(2))
+        post_date = date(today.year, month, day)
+        if post_date > today:
+            post_date = post_date.replace(year=today.year - 1)
+        return (today - post_date).days <= days
+    return False
+
+
+def crawl_jobkorea_multiple_pages(days: int = 1):
     MAX_ITEMS = 50
     SAVE_CNT = 5
     total_items = 0
@@ -86,7 +103,7 @@ def crawl_jobkorea_multiple_pages():
                 # title_el = row.query_selector("td.tplTit strong a")
                 # title = title_el.inner_text().strip()
                 # print(time_text, " : ",title)
-                if "분 전 등록" in time_text or "시간 전 등록" in time_text:
+                if _posted_within_days(time_text, days):
                     try:
                         title_el = row.query_selector("td.tplTit strong a")
                         title = title_el.inner_text().strip()
@@ -159,14 +176,14 @@ def crawl_jobkorea_multiple_pages():
         browser.close()
         playwright.stop()
 
-def run_crawler_with_retry(max_retries=3):
+def run_crawler_with_retry(max_retries=3, days: int = 1):
     """
     TimeoutError 등 예외 발생 시 전체 크롤러를 최대 max_retries까지 재시도
     """
     for attempt in range(1, max_retries + 1):
         try:
-            logging.info(f"\n🚀 크롤러 실행 시도 {attempt}/{max_retries}")
-            crawl_jobkorea_multiple_pages()
+            logging.info(f"\n🚀 크롤러 실행 시도 {attempt}/{max_retries} (최근 {days}일치)")
+            crawl_jobkorea_multiple_pages(days=days)
             logging.info("✅ 크롤러 정상 종료")
             break
         except Exception as e:

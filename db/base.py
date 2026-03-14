@@ -165,6 +165,21 @@ def create_tables(conn, cursor):
 # ──────────────────────────────
 # DATA INSERTION
 # ──────────────────────────────
+def clear_recruit_data():
+    """채용 공고 관련 테이블 데이터 전체 삭제. user_subscriptions는 유지."""
+    conn = connect_postgres()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            TRUNCATE TABLE recruit_tags, recruits, tags, companies, subregions, regions
+            RESTART IDENTITY CASCADE
+        """)
+        conn.commit()
+        logging.info("채용 공고 데이터 전체 삭제 완료")
+    finally:
+        release_connection(conn)
+
+
 def ensure_tables():
     """봇 시작 시 등 단독으로 테이블을 보장할 때 사용."""
     conn = connect_postgres()

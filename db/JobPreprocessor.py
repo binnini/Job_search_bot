@@ -1,6 +1,28 @@
 from datetime import datetime, date, timedelta
 import re
 
+SALARY_MIN = 600      # 만원 (최저 기준, 파트타임 포함)
+SALARY_MAX = 50000    # 만원 (5억 초과는 파싱 오류로 간주)
+EXPERIENCE_MAX = 30   # 년
+
+# 태그 동의어: 수집 시 정규화 기준 (대소문자·포맷·언어 통일)
+TAG_SYNONYMS = {
+    # Case 통일
+    'JAVA': 'Java',
+    'SPRING': 'Spring',
+    # 포맷 통일
+    'vue.js': 'Vue.js',
+    'vuejs': 'Vue.js',
+    'Vue': 'Vue.js',
+    'springboot': 'Spring Boot',
+    'spring Framework개발': 'Spring',
+    'React 기반': 'React',
+    # 언어 통일 (영문 → 한글)
+    'Backend': '백엔드',
+    'Front-end 개발': '프론트엔드',
+}
+
+
 class JobPreprocessor:
     @staticmethod
     def sanitize_string(value):
@@ -186,20 +208,52 @@ class JobPreprocessor:
     def parse_explanation(value):
         """
         쉼표로 나뉜 키워드 문자열을 리스트로 파싱
-        - 각 태그의 내부 공백까지 제거 (ex: "기술 지원" → "기술지원")
         - 좌우 공백 제거
+        - TAG_SYNONYMS 기준 정규화 적용
         - 빈 항목 제거
         - 문자열이 아니거나 내용이 없으면 None 반환
         """
         if not value or not isinstance(value, str):
             return None
 
-        # 쉼표 기준 분리 후 각 항목 내 모든 공백 제거
-        tags = [tag.replace(" ", "").strip() for tag in value.split(',') if tag.strip()]
-        
+        tags = [TAG_SYNONYMS.get(tag.strip(), tag.strip()) for tag in value.split(',') if tag.strip()]
+
         return tags if tags else None
     
     # 숫자 -> 문자열
+    # ──────────────────────────────
+    # VALIDATION
+    # ──────────────────────────────
+    @staticmethod
+    def validate_salary(value):
+        """
+        연봉 유효성 검사. (검증된 값, 위반 규칙명) 반환.
+        규칙 위반 시 값은 None으로 처리.
+        """
+        if value is None:
+            return None, None
+        if value < SALARY_MIN:
+            return None, f"below_minimum({SALARY_MIN})"
+        if value > SALARY_MAX:
+            return None, f"above_maximum({SALARY_MAX})"
+        return value, None
+
+    @staticmethod
+    def validate_experience(value):
+        """
+        경력 유효성 검사. (검증된 값, 위반 규칙명) 반환.
+        """
+        if value is None:
+            return None, None
+        if value < 0:
+            return None, "negative_value"
+        if value > EXPERIENCE_MAX:
+            return None, f"above_maximum({EXPERIENCE_MAX})"
+        return value, None
+
+    # ──────────────────────────────
+    # STRINGIFY
+    # ──────────────────────────────
     @staticmethod
     def stringify_deadline(deadline: date) -> str:
         """

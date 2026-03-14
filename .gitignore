@@ -5,6 +5,11 @@ logs/
 *.stderr.log
 *.stdout.log
 
+# 테스트 결과 파일 (스냅샷은 제외 — 회귀 기준선으로 커밋)
+tests/test_results.txt
+tests/test_quality_results.txt
+tests/test_subscription_results.txt
+
 # 환경 설정 파일
 .env
 
@@ -29,5 +34,3 @@ __pycache__/
 # OS/편집기 생성 파일
 .DS_Store
 Thumbs.db
-
-crawling/

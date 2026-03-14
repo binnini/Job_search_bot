@@ -1,9 +1,9 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from typing import List, Optional
-from datetime import date
-from pydantic import BaseModel
+from datetime import date, datetime
+from pydantic import BaseModel, ConfigDict
 
 Base = declarative_base()
 
@@ -47,6 +47,8 @@ class Recruit(Base):
     deadline = Column(Date)
     link = Column(String)
 
+    created_at = Column(DateTime, default=datetime.now)
+
     company = relationship("Company", back_populates="recruits")
     subregion = relationship("Subregion", back_populates="recruits")
     tags = relationship("Tag", secondary=recruit_tags, back_populates="recruits")
@@ -57,6 +59,34 @@ class Tag(Base):
     name = Column(String, unique=True, nullable=False)
 
     recruits = relationship("Recruit", secondary=recruit_tags, back_populates="tags")
+
+class NotificationLog(Base):
+    __tablename__ = "notification_log"
+    id = Column(Integer, primary_key=True)
+    discord_user_id = Column(String, nullable=False)
+    recruit_id = Column(Integer, ForeignKey("recruits.id", ondelete="CASCADE"), nullable=False)
+    notified_at = Column(DateTime, default=datetime.now)
+
+
+class UserProfile(Base):
+    """사용자 공통 필터 (지역/고용형태/경력/연봉). 사용자당 1개."""
+    __tablename__ = "user_profiles"
+    discord_user_id = Column(String, primary_key=True)
+    region = Column(String, nullable=True)
+    form = Column(Integer, nullable=True)
+    max_experience = Column(Integer, nullable=True)
+    min_annual_salary = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, default=datetime.now)
+
+
+class UserSubscription(Base):
+    """키워드 구독. 사용자당 최대 N개."""
+    __tablename__ = "user_subscriptions"
+    id = Column(Integer, primary_key=True)
+    discord_user_id = Column(String, nullable=False)
+    keyword = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
 
 class RecruitOut(BaseModel):
     id: int
@@ -71,5 +101,4 @@ class RecruitOut(BaseModel):
     region_name: Optional[str]
     tags: List[str]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,0 +1,331 @@
+{
+  "키워드 - 개발": {
+    "query": "개발자 공고 보여줘",
+    "filters": {
+      "keyword": "개발자"
+    }
+  },
+  "키워드 - 백엔드": {
+    "query": "백엔드 공고",
+    "filters": {
+      "keyword": "백엔드"
+    }
+  },
+  "키워드 - 프론트엔드": {
+    "query": "프론트엔드 개발자 찾아줘",
+    "filters": {
+      "keyword": "프론트엔드 개발자"
+    }
+  },
+  "키워드 - 마케팅": {
+    "query": "마케팅 공고 알려줘",
+    "filters": {
+      "keyword": "마케팅"
+    }
+  },
+  "키워드 - 데이터 분석": {
+    "query": "데이터 분석 공고",
+    "filters": {
+      "keyword": "데이터 분석"
+    }
+  },
+  "키워드 - 디자인": {
+    "query": "디자이너 채용 공고",
+    "filters": {
+      "keyword": "디자이너"
+    }
+  },
+  "키워드 - 영업": {
+    "query": "영업직 공고 보여줘",
+    "filters": {
+      "keyword": "영업직"
+    }
+  },
+  "키워드 - 회계": {
+    "query": "회계 공고",
+    "filters": {
+      "keyword": "회계"
+    }
+  },
+  "키워드 - CS": {
+    "query": "고객응대 공고",
+    "filters": {
+      "keyword": "고객응대"
+    }
+  },
+  "키워드 - 물류": {
+    "query": "물류 공고 알려줘",
+    "filters": {
+      "keyword": "물류"
+    }
+  },
+  "지역 - 서울": {
+    "query": "서울 공고",
+    "filters": {
+      "region": "서울"
+    }
+  },
+  "지역 - 경기": {
+    "query": "경기 공고 보여줘",
+    "filters": {
+      "region": "경기"
+    }
+  },
+  "지역 - 부산": {
+    "query": "부산 채용 공고",
+    "filters": {
+      "region": "부산"
+    }
+  },
+  "지역 - 대전": {
+    "query": "대전 공고 찾아줘",
+    "filters": {
+      "region": "대전"
+    }
+  },
+  "지역 - 인천": {
+    "query": "인천 공고",
+    "filters": {
+      "region": "인천"
+    }
+  },
+  "고용형태 - 정규직": {
+    "query": "정규직 공고 보여줘",
+    "filters": {
+      "form": "정규직"
+    }
+  },
+  "고용형태 - 계약직": {
+    "query": "계약직 공고",
+    "filters": {
+      "form": "계약직"
+    }
+  },
+  "고용형태 - 인턴": {
+    "query": "인턴 공고 찾아줘",
+    "filters": {
+      "form": "인턴"
+    }
+  },
+  "고용형태 - 프리랜서": {
+    "query": "프리랜서 공고",
+    "filters": {
+      "form": "프리랜서"
+    }
+  },
+  "고용형태 - 아르바이트": {
+    "query": "아르바이트 공고",
+    "filters": {
+      "form": "아르바이트"
+    }
+  },
+  "경력 - 신입": {
+    "query": "신입 공고",
+    "filters": {
+      "max_experience": 0
+    }
+  },
+  "경력 - 1년": {
+    "query": "경력 1년 공고",
+    "filters": {
+      "max_experience": 1
+    }
+  },
+  "경력 - 3년": {
+    "query": "경력 3년 이상 공고",
+    "filters": {
+      "max_experience": 3
+    }
+  },
+  "경력 - 5년": {
+    "query": "5년차 공고 보여줘",
+    "filters": {
+      "max_experience": 5
+    }
+  },
+  "연봉 - 3000만원": {
+    "query": "연봉 3000만원 이상 공고",
+    "filters": {
+      "min_annual_salary": 3000
+    }
+  },
+  "연봉 - 4000만원": {
+    "query": "연봉 4천만원 이상 채용",
+    "filters": {
+      "min_annual_salary": 4000
+    }
+  },
+  "연봉 - 5000만원": {
+    "query": "연봉 5000만원 이상",
+    "filters": {
+      "min_annual_salary": 5000
+    }
+  },
+  "연봉 - 억 단위": {
+    "query": "연봉 1억 이상 공고",
+    "filters": {
+      "min_annual_salary": 10000
+    }
+  },
+  "키워드+지역 - 마케팅 서울": {
+    "query": "서울 마케팅 공고",
+    "filters": {
+      "keyword": "마케팅",
+      "region": "서울"
+    }
+  },
+  "키워드+지역 - 개발 경기": {
+    "query": "경기 개발자 공고",
+    "filters": {
+      "keyword": "개발자",
+      "region": "경기"
+    }
+  },
+  "키워드+지역 - 영업 부산": {
+    "query": "부산 영업 공고",
+    "filters": {
+      "keyword": "영업",
+      "region": "부산"
+    }
+  },
+  "키워드+지역 - 디자이너 서울": {
+    "query": "서울 디자이너 채용",
+    "filters": {
+      "keyword": "디자이너",
+      "region": "서울"
+    }
+  },
+  "키워드+고용형태 - 개발 정규직": {
+    "query": "개발자 정규직 공고",
+    "filters": {
+      "keyword": "개발자",
+      "form": "정규직"
+    }
+  },
+  "키워드+고용형태 - 마케팅 인턴": {
+    "query": "마케팅 인턴 공고",
+    "filters": {
+      "keyword": "마케팅",
+      "form": "인턴"
+    }
+  },
+  "키워드+고용형태 - 디자인 계약직": {
+    "query": "디자인 계약직 채용",
+    "filters": {
+      "keyword": "디자인",
+      "form": "계약직"
+    }
+  },
+  "키워드+경력 - 개발 신입": {
+    "query": "백엔드 신입 공고",
+    "filters": {
+      "keyword": "백엔드",
+      "max_experience": 0
+    }
+  },
+  "키워드+경력 - 영업 3년": {
+    "query": "영업 경력 3년 공고",
+    "filters": {
+      "keyword": "영업",
+      "max_experience": 3
+    }
+  },
+  "키워드+경력 - 회계 5년": {
+    "query": "회계 5년 이상 공고",
+    "filters": {
+      "keyword": "회계",
+      "max_experience": 5
+    }
+  },
+  "3개 - 개발+서울+정규직": {
+    "query": "서울 개발자 정규직 공고",
+    "filters": {
+      "keyword": "개발자",
+      "region": "서울",
+      "form": "정규직"
+    }
+  },
+  "3개 - 마케팅+서울+신입": {
+    "query": "서울 마케팅 신입 공고",
+    "filters": {
+      "keyword": "마케팅",
+      "region": "서울",
+      "max_experience": 0
+    }
+  },
+  "3개 - 영업+경기+정규직": {
+    "query": "경기 영업 정규직 채용",
+    "filters": {
+      "keyword": "영업",
+      "region": "경기",
+      "form": "정규직"
+    }
+  },
+  "4개 - 개발+서울+정규직+신입": {
+    "query": "서울 백엔드 정규직 신입 공고",
+    "filters": {
+      "keyword": "백엔드",
+      "region": "서울",
+      "form": "정규직",
+      "max_experience": 0
+    }
+  },
+  "4개 - 개발+서울+정규직+연봉": {
+    "query": "서울 개발자 정규직 연봉 4000만원 이상",
+    "filters": {
+      "keyword": "개발자",
+      "region": "서울",
+      "form": "정규직",
+      "min_annual_salary": 4000
+    }
+  },
+  "자연어 - 회사명": {
+    "query": "카카오 공고 알려줘",
+    "filters": {
+      "company_name": "카카오"
+    }
+  },
+  "자연어 - 이번달 마감": {
+    "query": "이번달 마감 공고",
+    "filters": {
+      "min_deadline": "2026-03-01"
+    }
+  },
+  "자연어 - 다음달": {
+    "query": "다음달 마감 공고 보여줘",
+    "filters": {
+      "min_deadline": "2026-04-01"
+    }
+  },
+  "자연어 - 억 단위 연봉": {
+    "query": "연봉 2억 공고",
+    "filters": {
+      "min_annual_salary": 20000
+    }
+  },
+  "자연어 - 복합 구어체": {
+    "query": "서울에서 신입으로 일할 수 있는 마케팅 공고 찾아줘",
+    "filters": {
+      "keyword": "마케팅",
+      "region": "서울",
+      "max_experience": 0
+    }
+  },
+  "결과없음 - 연봉 너무 높음": {
+    "query": "연봉 5억 이상 신입 공고",
+    "filters": {
+      "max_experience": 0,
+      "min_annual_salary": 50000
+    }
+  },
+  "결과없음 - 너무 좁은 조건": {
+    "query": "제주 데이터 분석 정규직 신입 연봉 5000만원 이상",
+    "filters": {
+      "keyword": "데이터 분석",
+      "region": "제주",
+      "form": "정규직",
+      "max_experience": 0,
+      "min_annual_salary": 5000
+    }
+  }
+}

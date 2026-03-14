@@ -4,18 +4,13 @@ from db.JobPreprocessor import JobPreprocessor
 
 
 def _describe_subscription(sub) -> str:
-    parts = []
-    if sub.keyword:
-        parts.append(f"키워드: {sub.keyword}")
-    if sub.region:
-        parts.append(f"지역: {sub.region}")
-    if sub.form is not None:
-        parts.append(f"고용형태: {JobPreprocessor.stringify_form(sub.form)}")
-    if sub.max_experience is not None:
-        parts.append(f"최대경력: {JobPreprocessor.stringify_experience(sub.max_experience)}")
-    if sub.min_annual_salary is not None:
-        parts.append(f"최소연봉: {JobPreprocessor.stringify_salary(sub.min_annual_salary)}")
-    return ", ".join(parts) if parts else "(조건 없음)"
+    return (
+        f"키워드: {sub.keyword or '상관없음'}\n"
+        f"지역: {sub.region or '상관없음'}\n"
+        f"고용형태: {JobPreprocessor.stringify_form(sub.form) if sub.form is not None else '상관없음'}\n"
+        f"최대경력: {JobPreprocessor.stringify_experience(sub.max_experience) if sub.max_experience is not None else '상관없음'}\n"
+        f"최소연봉: {JobPreprocessor.stringify_salary(sub.min_annual_salary) if sub.min_annual_salary is not None else '상관없음'}"
+    )
 
 
 class KeywordModal(discord.ui.Modal, title="직군 키워드 입력"):

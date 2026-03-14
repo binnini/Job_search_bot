@@ -100,9 +100,9 @@ async def on_message(message):
         if not subs:
             await message.channel.send("구독 중인 조건이 없습니다. `!구독`으로 등록하세요.")
         else:
-            lines = [f"📋 내 구독 목록 ({len(subs)}/{MAX_SUBSCRIPTIONS_PER_USER}개)\n"]
+            lines = [f"📋 내 구독 목록 ({len(subs)}/{MAX_SUBSCRIPTIONS_PER_USER}개)"]
             for i, sub in enumerate(subs, start=1):
-                lines.append(f"[{i}] {_describe_subscription(sub)}")
+                lines.append(f"\n**[{i}]**\n{_describe_subscription(sub)}")
             await message.channel.send("\n".join(lines))
         return
 

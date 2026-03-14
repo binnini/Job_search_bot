@@ -20,6 +20,9 @@ def _posted_within_days(time_text: str, days: int) -> bool:
     """등록 시간 텍스트가 days일 이내인지 판별."""
     if "분 전 등록" in time_text or "시간 전 등록" in time_text:
         return True
+    m = re.search(r'(\d+)\s*일\s*전\s*등록', time_text)
+    if m:
+        return int(m.group(1)) <= days
     m = re.search(r'(\d{2})/(\d{2})', time_text)
     if m:
         today = date.today()

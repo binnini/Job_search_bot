@@ -1,6 +1,7 @@
 import psycopg2
 from psycopg2 import pool
 from dotenv import load_dotenv
+from datetime import datetime
 import os
 from .JobPreprocessor import JobPreprocessor
 import csv
@@ -156,6 +157,21 @@ def create_tables(conn, cursor):
         );
         """)
 
+        # 데이터 품질 로그
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS data_quality_log (
+            id SERIAL PRIMARY KEY,
+            batch_id TEXT NOT NULL,
+            company_name TEXT,
+            announcement_name TEXT,
+            field TEXT NOT NULL,
+            rule TEXT NOT NULL,
+            original_value TEXT,
+            parsed_value TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+        """)
+
         logging.info("테이블 생성 완료")
     except Exception as e:
         logging.error(f"테이블 생성 중 오류 발생: {e}")
@@ -195,6 +211,9 @@ def batch_to_db(data_batch):
     """크롤링된 배치 데이터를 직접 DB에 삽입.
     data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, position, link] 리스트의 리스트."""
     conn = connect_postgres()
+    batch_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    quality_events = []
+
     try:
         cursor = conn.cursor()
         create_tables(conn, cursor)
@@ -206,16 +225,29 @@ def batch_to_db(data_batch):
                 desc_tags = JobPreprocessor.parse_explanation(description) or []
                 pos_tags = [t.strip() for t in position.replace('·', ',').split(',') if t.strip()] if position else []
                 all_tags = desc_tags + [t for t in pos_tags if t not in desc_tags]
+
+                # 파싱 후 유효성 검사
+                parsed_salary = JobPreprocessor.parse_salary(salary)
+                parsed_experience = JobPreprocessor.parse_experience(career)
+
+                validated_salary, salary_rule = JobPreprocessor.validate_salary(parsed_salary)
+                validated_experience, exp_rule = JobPreprocessor.validate_experience(parsed_experience)
+
+                if salary_rule:
+                    quality_events.append((batch_id, company, title, 'annual_salary', salary_rule, salary, str(parsed_salary)))
+                if exp_rule:
+                    quality_events.append((batch_id, company, title, 'experience', exp_rule, career, str(parsed_experience)))
+
                 _jobkorea_write(
                     conn=conn,
                     cursor=cursor,
                     company_name=company,
                     announcement_name=title,
-                    experience=JobPreprocessor.parse_experience(career),
+                    experience=validated_experience,
                     education=JobPreprocessor.parse_education(education),
                     form=JobPreprocessor.parse_form(emp_type),
                     region=JobPreprocessor.parse_region(location),
-                    annual_salary=JobPreprocessor.parse_salary(salary),
+                    annual_salary=validated_salary,
                     deadline=JobPreprocessor.parse_deadline(deadline),
                     tags=all_tags or None,
                     link=link,
@@ -223,6 +255,17 @@ def batch_to_db(data_batch):
             except Exception as e:
                 conn.rollback()
                 logging.warning(f"배치 {i}번째 행 처리 실패: {e}")
+
+        # 품질 이벤트 일괄 기록
+        if quality_events:
+            cursor.executemany("""
+                INSERT INTO data_quality_log
+                    (batch_id, company_name, announcement_name, field, rule, original_value, parsed_value)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, quality_events)
+            conn.commit()
+            logging.info(f"데이터 품질 이벤트 {len(quality_events)}건 기록 (batch_id={batch_id})")
+
     finally:
         release_connection(conn)
 

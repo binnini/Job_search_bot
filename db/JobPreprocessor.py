@@ -1,6 +1,11 @@
 from datetime import datetime, date, timedelta
 import re
 
+SALARY_MIN = 600      # 만원 (최저 기준, 파트타임 포함)
+SALARY_MAX = 50000    # 만원 (5억 초과는 파싱 오류로 간주)
+EXPERIENCE_MAX = 30   # 년
+
+
 class JobPreprocessor:
     @staticmethod
     def sanitize_string(value):
@@ -200,6 +205,39 @@ class JobPreprocessor:
         return tags if tags else None
     
     # 숫자 -> 문자열
+    # ──────────────────────────────
+    # VALIDATION
+    # ──────────────────────────────
+    @staticmethod
+    def validate_salary(value):
+        """
+        연봉 유효성 검사. (검증된 값, 위반 규칙명) 반환.
+        규칙 위반 시 값은 None으로 처리.
+        """
+        if value is None:
+            return None, None
+        if value < SALARY_MIN:
+            return None, f"below_minimum({SALARY_MIN})"
+        if value > SALARY_MAX:
+            return None, f"above_maximum({SALARY_MAX})"
+        return value, None
+
+    @staticmethod
+    def validate_experience(value):
+        """
+        경력 유효성 검사. (검증된 값, 위반 규칙명) 반환.
+        """
+        if value is None:
+            return None, None
+        if value < 0:
+            return None, "negative_value"
+        if value > EXPERIENCE_MAX:
+            return None, f"above_maximum({EXPERIENCE_MAX})"
+        return value, None
+
+    # ──────────────────────────────
+    # STRINGIFY
+    # ──────────────────────────────
     @staticmethod
     def stringify_deadline(deadline: date) -> str:
         """

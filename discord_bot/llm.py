@@ -55,8 +55,13 @@ def extract_filters(query: str) -> dict:
         filters['max_experience'] = int(m.group(1))
         remaining = remaining[:m.start()] + remaining[m.end():]
 
-    # 연봉 — "N천만원" → "N만원" → "연봉 N" 순서로 매칭
-    if m := re.search(r'(\d+)\s*천\s*만\s*원', remaining):
+    # 연봉 — "N억..." → "N천만원" → "N만원" → "연봉 N" 순서로 매칭
+    if m := re.search(r'(\d+)\s*억\s*(?:(\d+)\s*천\s*만\s*원?)?', remaining):
+        eok = int(m.group(1)) * 10000
+        cheon = int(m.group(2)) * 1000 if m.group(2) else 0
+        filters['min_annual_salary'] = eok + cheon
+        remaining = remaining[:m.start()] + remaining[m.end():]
+    elif m := re.search(r'(\d+)\s*천\s*만\s*원', remaining):
         filters['min_annual_salary'] = int(m.group(1)) * 1000
         remaining = remaining[:m.start()] + remaining[m.end():]
     elif m := re.search(r'(\d+)\s*만\s*원', remaining):
@@ -84,6 +89,15 @@ def extract_filters(query: str) -> dict:
         year = today.year if month >= today.month else today.year + 1
         filters['min_deadline'] = date(year, month, 1)
         remaining = remaining[:m.start()] + remaining[m.end():]
+
+    # 기업명 — "X 공고" / "X 채용" 패턴: X가 첫 단어이고 구조화 필터와 겹치지 않는 경우
+    if m := re.match(r'^(\S+)\s+(?:공고|채용)', query.strip()):
+        candidate = m.group(1)
+        if (candidate not in REGIONS and
+                candidate not in FORM_KEYWORDS and
+                candidate not in ['신입', '경력']):
+            filters['company_name'] = candidate
+            remaining = remaining.replace(candidate, ' ', 1)
 
     # 키워드 — 구조화된 패턴 제거 후 남은 유효 텍스트
     for sw in STOPWORDS:

@@ -16,7 +16,7 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 intents = discord.Intents.all()
-client = discord.Client(command_prefix='!', intents=intents)
+client = discord.Client(intents=intents)
 
 
 def _describe_subscription(sub) -> str:
@@ -38,7 +38,8 @@ def _describe_subscription(sub) -> str:
 @client.event
 async def on_ready():
     ensure_tables()
-    notify_task.start()
+    if not notify_task.is_running():
+        notify_task.start()
     logging.info(f"봇 준비 완료: {client.user.name}")
     print(f'We have logged in as {client.user.name}')
 
@@ -61,6 +62,16 @@ async def on_message(message):
 
     content = message.content.strip()
     if not content:
+        return
+
+    # ── !알림테스트 ────────────────────────────────────────
+    if content.startswith("!알림테스트"):
+        await message.channel.send("🔍 알림 조건을 확인 중입니다...")
+        try:
+            await notify_subscribers(client)
+            await message.channel.send("✅ 알림 테스트 완료. 조건에 맞는 공고가 있으면 DM을 확인하세요.")
+        except Exception as e:
+            await message.channel.send(f"❌ 알림 테스트 실패: {str(e)}")
         return
 
     # ── !구독해제 ──────────────────────────────────────────

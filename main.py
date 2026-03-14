@@ -2,7 +2,7 @@ import argparse
 from crawling import scraper
 from db.base import clear_recruit_data
 from dotenv import load_dotenv
-import logs.log as log
+import log_config
 import logging
 
 if __name__ == "__main__":

@@ -478,3 +478,200 @@ generate_quality_report()  # 완전성·분포·이벤트 현황 출력
 ```
 
 정제 후 연봉 평균이 **5,067만원 → 4,026만원**으로 정상화되었습니다.
+
+---
+
+## 14. 검색 품질 개선 — 동의어 사전 · AND/OR 폴백 · 태그 정규화
+
+### Problem
+
+50개 테스트 케이스 기반으로 검색 품질을 분석한 결과 세 가지 구조적 한계가 발견되었습니다.
+
+**① 사용자 쿼리 동의어 미처리**
+
+영문 약어나 구어체 표현이 그대로 keyword로 넘어가 DB 매칭에 실패했습니다.
+
+```
+"FE 공고"        → keyword: 'FE'       → 0건 (DB에 'FE' 태그 없음)
+"BE 신입 서울"   → keyword: 'BE'       → 0건
+"데이터분석가 공고" → keyword: '데이터분석가' → 0건
+```
+
+**② keyword AND-only 검색으로 복합 키워드 검색 실패**
+
+`keyword = "프론트엔드 개발자"` 처럼 두 토큰이 모두 공고명·태그에 존재해야 AND로 결과가 나왔습니다.
+한 토큰만 포함한 공고는 누락되었고, 조건이 추가될수록 0건이 되는 경우가 많았습니다.
+
+**③ 태그 중복·불일치**
+
+크롤링 시점이나 사이트 표기 차이로 동일 기술이 다른 이름으로 저장되었습니다.
+
+```
+Vue: 'vue.js', 'vuejs', 'Vue'  → 모두 다른 태그로 관리
+Java: 'Java', 'JAVA'
+Spring: 'SPRING', 'springboot', 'spring Framework개발'
+프론트엔드: 'Backend', 'Front-end 개발', '백엔드'
+```
+
+사용자가 "Vue" 검색 시 `ILIKE '%Vue%'`로 어느 정도 커버되지만, 대소문자·포맷 불일치로 누락되는 케이스가 있었습니다. 또한 미래 수집 데이터에서 같은 불일치가 반복될 수 있는 구조였습니다.
+
+### Solution
+
+**① QUERY_SYNONYMS — 쿼리 동의어 사전 (discord_bot/llm.py)**
+
+```python
+QUERY_SYNONYMS = {
+    'FE': '프론트엔드', 'BE': '백엔드',
+    'frontend': '프론트엔드', 'backend': '백엔드',
+    'fullstack': '풀스택', 'devops': 'DevOps',
+    '데이터분석가': '데이터 분석', '데이터과학자': '데이터 분석',
+    '개발직': '개발자', '기획자': '서비스기획',
+}
+
+def _normalize_query(query: str) -> str:
+    return ' '.join(QUERY_SYNONYMS.get(t, t) for t in query.split())
+```
+
+`extract_filters()` 진입 전 토큰 단위로 치환하여 단어 파괴 없이 동의어를 정규화합니다.
+
+**② AND → OR 폴백 (db/io.py)**
+
+```python
+def _build_query(keyword_mode: str = 'and'):
+    ...
+    if keyword_mode == 'and':
+        for token in tokens:
+            q = q.filter(or_(announcement_name ILIKE, tags any))
+    else:  # 'or' 폴백
+        q = q.filter(or_(*[or_(announcement_name ILIKE, tags any) for token in tokens]))
+    ...
+
+results = _build_query('and').limit(limit).all()
+
+# AND 결과 없고 키워드가 여러 토큰이면 OR 폴백
+if not results and keyword and len(keyword.split()) > 1:
+    results = _build_query('or').limit(limit).all()
+```
+
+다른 필터(지역·경력·연봉·고용형태)는 AND/OR 양쪽 모두 동일하게 적용됩니다.
+
+**③ TAG_SYNONYMS — 태그 정규화 (db/JobPreprocessor.py + db/io.py)**
+
+```python
+TAG_SYNONYMS = {
+    'JAVA': 'Java', 'SPRING': 'Spring',
+    'vue.js': 'Vue.js', 'vuejs': 'Vue.js', 'Vue': 'Vue.js',
+    'springboot': 'Spring Boot', 'React 기반': 'React',
+    'Backend': '백엔드', 'Front-end 개발': '프론트엔드',
+}
+```
+
+- `parse_explanation()` — 수집 시 자동 적용 (미래 데이터 방지)
+- `normalize_existing_tags()` — 기존 DB 일회성 정리 함수 (태그 병합 or 이름 변경)
+
+### Result
+
+```
+FE 공고 보여줘      → keyword: '프론트엔드' → ✅ 결과 반환
+BE 신입 서울        → keyword: '백엔드'     → ✅ 결과 반환
+데이터분석가 공고   → keyword: '데이터 분석' → ✅ 결과 반환
+```
+
+테스트 결과: 49/50 통과 유지 (실패 1건은 의도된 "결과없음" 케이스).
+
+---
+
+## 15. extract_filters 오분류 — 직무 키워드가 회사명으로 처리되는 문제
+
+### Problem
+
+`extract_filters()`에 50개 테스트 케이스를 실행한 결과 42/50만 통과하였고, 실패 원인이 세 가지 버그로 압축되었습니다.
+
+**① `company_name` 검출이 원본 쿼리 기준으로 동작**
+
+```python
+# 버그: 이미 처리된 필터가 남아 있는 원본 query를 다시 검사
+if m := re.match(r'^(\S+)\s+(?:공고|채용)', query.strip()):
+```
+
+"5년차 공고 보여줘" 처리 시:
+1. 경력 파싱 → `remaining`에서 "5년차" 제거, `max_experience = 5`
+2. company_name 검사 → 원본 `query`("5년차 공고 보여줘")에서 다시 "5년차" 매칭 → `company_name = '5년차'`
+
+두 필터가 동시에 잘못 설정되어 결과 없음.
+
+**② `JOB_KEYWORDS` 제외 조건 없음**
+
+`개발자`, `백엔드`, `프론트엔드`, `디자이너`, `영업직`, `고객응대` 등 직무 키워드가 `"X 공고"` 패턴에 매칭되어 `company_name`으로 오분류되었습니다.
+
+```
+"개발자 공고 보여줘" → company_name: '개발자'  (keyword가 되어야 함)
+"백엔드 공고"       → company_name: '백엔드'
+"디자이너 채용 공고" → company_name: '디자이너'
+```
+
+**③ STOPWORD를 문자열 치환으로 제거하여 단어 파괴**
+
+```python
+for sw in STOPWORDS:
+    remaining = remaining.replace(sw, ' ')  # 단어 중간도 치환됨
+```
+
+`STOPWORDS`에 `'이'`, `'가'` 등 단일 글자 조사를 추가하자 복합 명사가 파괴되었습니다.
+
+```
+"데이터 분석" → "데 터 분석"   ('이' 치환)
+"디자이너"    → "디자 너"      ('이' 치환)
+```
+
+추가로 `"부산 채용 공고"` → `remaining = " 채용 공고"` → `company_name: '채용'` 오류도 발생했습니다. `채용`이 `STOPWORDS`에 있었지만 `company_name` 검출 제외 조건에는 없었기 때문입니다.
+
+### Solution
+
+세 가지를 순서대로 수정했습니다.
+
+**① `remaining` 기준으로 변경**
+
+```python
+# 수정: 이미 처리된 필터가 제거된 remaining을 검사
+if m := re.match(r'^(\S+)\s+(?:공고|채용)', remaining.strip()):
+```
+
+**② `JOB_KEYWORDS` 집합 추가 및 제외 조건 반영**
+
+```python
+JOB_KEYWORDS = {
+    '개발', '개발자', '백엔드', '프론트엔드', '풀스택',
+    '디자이너', '디자인', '마케팅', '마케터',
+    '영업', '영업직', '회계', '재무', '경리',
+    '고객응대', '고객서비스', 'CS', '물류', ...
+}
+
+if (candidate not in REGIONS and
+        candidate not in FORM_KEYWORDS and
+        candidate not in ['신입', '경력'] and
+        candidate not in JOB_KEYWORDS and      # 추가
+        candidate not in STOPWORDS):           # 추가
+    filters['company_name'] = candidate
+```
+
+**③ STOPWORD 제거를 토큰 단위로 변경**
+
+```python
+# 수정: 공백 기준으로 토큰을 분리한 뒤 집합 조회로 제거
+tokens = [t for t in remaining.split() if t not in STOPWORDS]
+keyword = ' '.join(tokens).strip()
+```
+
+단일 글자 조사(`이`, `가`, `을`, `를` 등)를 STOPWORDS에서 제거하고, 토큰 단위 비교이므로 복합 명사 내부를 파괴하지 않습니다.
+
+### Result
+
+| | 통과 | 실패 |
+|---|---|---|
+| 수정 전 | 42/50 | 8 |
+| 수정 후 | 49/50 | 1 |
+
+실패 1건(`[50] 제주 데이터 분석 정규직 신입 연봉 5000만원 이상`)은 DB에 조건을 만족하는 공고가 없는 케이스로, 의도된 결과입니다.
+
+---

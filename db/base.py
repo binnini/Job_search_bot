@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 from .JobPreprocessor import JobPreprocessor
 import csv
-import logs.log as log
+import log_config
 import logging
 
 load_dotenv()
@@ -195,6 +195,18 @@ def create_tables(conn, cursor):
             CREATE INDEX IF NOT EXISTS idx_user_sub_user_id
             ON user_subscriptions(discord_user_id)
         """)
+
+        # 검색 필터 컬럼 인덱스
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline    ON recruits(deadline)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_form        ON recruits(form)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_experience  ON recruits(experience)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_salary      ON recruits(annual_salary)")
+        # 복합 인덱스: 가장 빈번한 필터 조합 (deadline 필수 + form/experience)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline_form ON recruits(deadline, form)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline_exp  ON recruits(deadline, experience)")
+        # 공고명 ILIKE 검색용 trigram 인덱스 (pg_trgm 필요)
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_name_trgm ON recruits USING gin(announcement_name gin_trgm_ops)")
 
         logging.info("테이블 생성 완료")
     except Exception as e:

@@ -5,6 +5,7 @@
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
+import os
 from db.quality import generate_quality_report, clean_existing_data
 
 if __name__ == "__main__":
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     report = generate_quality_report()
     print(report)
 
-    output_path = "test_quality_results.txt"
+    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_quality_results.txt")
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(report)
     print(f"\n✅ 결과 저장 완료: {output_path}")

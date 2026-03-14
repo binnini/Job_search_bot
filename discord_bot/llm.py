@@ -2,6 +2,7 @@ import re
 from datetime import date
 from db.io import search_recruits_by_filter
 from db.JobPreprocessor import JobPreprocessor
+from discord_bot.notifier import format_recruit
 
 REGIONS = [
     '서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', '세종',
@@ -10,12 +11,52 @@ REGIONS = [
 
 FORM_KEYWORDS = ['정규직', '계약직', '인턴', '파견직', '프리랜서', '아르바이트']
 
-STOPWORDS = [
+STOPWORDS = {
     '공고', '채용', '보여줘', '찾아줘', '알려줘', '검색해줘', '검색', '추천',
-    '이상', '이하', '까지', '에서', '부터', '으로',
+    '이상', '이하', '까지', '에서', '부터', '으로', '에서의', '로서',
     '좀', '주세요', '해줘', '해주세요', '연봉', '경력',
     '모집하는', '모집', '마감',
-]
+    '일할', '수', '있는', '있어', '원하는', '하는', '하고', '싶은', '싶어',
+    '찾는', '구하는', '되는', '위한', '관련', '관한',
+}
+
+# 사용자 쿼리 동의어: 영문 약어·구어체 → 검색 키워드로 정규화 (토큰 단위 적용)
+QUERY_SYNONYMS = {
+    'FE': '프론트엔드',
+    'BE': '백엔드',
+    'frontend': '프론트엔드',
+    'backend': '백엔드',
+    'fullstack': '풀스택',
+    'devops': 'DevOps',
+    '데이터분석가': '데이터 분석',
+    '데이터사이언티스트': '데이터 분석',
+    '데이터과학자': '데이터 분석',
+    '개발직': '개발자',
+    '기획자': '서비스기획',
+    '퍼블리셔': 'UI퍼블리셔',
+}
+
+# 회사명으로 오인하면 안 되는 직무/직종 키워드
+JOB_KEYWORDS = {
+    '개발', '개발자', '백엔드', '프론트엔드', '풀스택',
+    '디자이너', '디자인', 'UI', 'UX',
+    '마케팅', '마케터',
+    '영업', '영업직',
+    '회계', '재무', '경리',
+    '고객응대', '고객서비스', 'CS',
+    '물류', '유통', '배송',
+    '데이터', '데이터분석',
+    '기획', 'PM', 'PO',
+    'HR', '인사', '총무',
+    '연구', '연구원',
+    '생산', '제조', '품질',
+    '교육', '강사',
+}
+
+
+def _normalize_query(query: str) -> str:
+    """사용자 쿼리 토큰 단위로 동의어 치환."""
+    return ' '.join(QUERY_SYNONYMS.get(t, t) for t in query.split())
 
 
 def extract_filters(query: str) -> dict:
@@ -28,7 +69,7 @@ def extract_filters(query: str) -> dict:
         'min_deadline': None,
         'company_name': None,
     }
-    remaining = query
+    remaining = _normalize_query(query)
 
     # 지역
     for region in REGIONS:
@@ -90,19 +131,20 @@ def extract_filters(query: str) -> dict:
         filters['min_deadline'] = date(year, month, 1)
         remaining = remaining[:m.start()] + remaining[m.end():]
 
-    # 기업명 — "X 공고" / "X 채용" 패턴: X가 첫 단어이고 구조화 필터와 겹치지 않는 경우
-    if m := re.match(r'^(\S+)\s+(?:공고|채용)', query.strip()):
+    # 기업명 — "X 공고" / "X 채용" 패턴: remaining 기준으로 검사 (이미 처리된 필터 제외)
+    if m := re.match(r'^(\S+)\s+(?:공고|채용)', remaining.strip()):
         candidate = m.group(1)
         if (candidate not in REGIONS and
                 candidate not in FORM_KEYWORDS and
-                candidate not in ['신입', '경력']):
+                candidate not in ['신입', '경력'] and
+                candidate not in JOB_KEYWORDS and
+                candidate not in STOPWORDS):
             filters['company_name'] = candidate
             remaining = remaining.replace(candidate, ' ', 1)
 
-    # 키워드 — 구조화된 패턴 제거 후 남은 유효 텍스트
-    for sw in STOPWORDS:
-        remaining = remaining.replace(sw, ' ')
-    keyword = re.sub(r'\s+', ' ', remaining).strip()
+    # 키워드 — 구조화된 패턴 제거 후 남은 유효 텍스트 (토큰 단위 stopword 제거)
+    tokens = [t for t in remaining.split() if t not in STOPWORDS]
+    keyword = ' '.join(tokens).strip()
     if keyword:
         filters['keyword'] = keyword
 
@@ -127,16 +169,5 @@ def sql_search(query, limit=5):
     if not recruits:
         return "조건에 맞는 채용 공고를 찾지 못했습니다."
 
-    result_lines = []
-    for i, r in enumerate(recruits, start=1):
-        result_lines.append(
-            f"📌 [{i}] {r.announcement_name} @ {r.company_name}\n"
-            f"- 경력: {JobPreprocessor.stringify_experience(r.experience) or '무관'}\n"
-            f"- 학력: {JobPreprocessor.stringify_education(r.education) or '무관'}\n"
-            f"- 형태: {JobPreprocessor.stringify_form(r.form) or '정보 없음'}\n"
-            f"- 연봉: {JobPreprocessor.stringify_salary(r.annual_salary) or '협의'}\n"
-            f"- 마감일: {JobPreprocessor.stringify_deadline(r.deadline)}\n"
-            f"🔗 {r.link}\n"
-        )
-
-    return "\n".join(result_lines)
+    result_lines = [format_recruit(i, r, include_education=True) for i, r in enumerate(recruits, start=1)]
+    return "\n\n".join(result_lines)

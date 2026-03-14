@@ -4,11 +4,9 @@ import logging
 import re
 from datetime import date, datetime
 from dotenv import load_dotenv
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
 from .page_handler import init_browser
 from .user_agent import random_user_agent
-from .utils import random_sleep, periodic_rest
+from .utils import random_sleep, periodic_rest, safe_wait
 from db.base import batch_to_db
 
 load_dotenv(override=True)
@@ -49,28 +47,9 @@ def crawl_jobkorea_multiple_pages(days: int = 1):
 
     playwright, browser, context, page = init_browser(ua, headers)
 
-    def safe_wait_networkidle(page, desc="페이지", retries=3, timeout=30000):
-        """
-        networkidle 대기 중 TimeoutError 발생 시 재시도하고, 실패 시 False 리턴
-        """
-        for attempt in range(1, retries + 1):
-            try:
-                page.wait_for_load_state("networkidle", timeout=timeout)
-                return True
-            except PlaywrightTimeoutError:
-                logging.warning(f"{desc} 로딩 시간 초과 ({attempt}/{retries}), 재시도합니다.")
-                if attempt < retries:
-                    try:
-                        page.reload()
-                        page.wait_for_load_state("networkidle", timeout=timeout)
-                        return True
-                    except PlaywrightTimeoutError:
-                        continue
-        return False
-
     try:
         page.goto(TARGET_URL)
-        if not safe_wait_networkidle(page, desc="초기 페이지 이동"):  # 초기 로드 시도
+        if not safe_wait(page, load_state="networkidle", desc="초기 페이지 이동", retries=3, timeout=30000):
             logging.error("초기 페이지 로드에 실패해 크롤러를 종료합니다.")
             return
 
@@ -79,7 +58,7 @@ def crawl_jobkorea_multiple_pages(days: int = 1):
         page.select_option("select#orderTab", value="2")
         page.select_option("select#pstab", value="50")
         page.click("button#dev-gi-search")
-        if not safe_wait_networkidle(page, desc="필터 적용 후 페이지 이동"):  # 필터 적용 후
+        if not safe_wait(page, load_state="networkidle", desc="필터 적용 후 페이지 이동", retries=3, timeout=30000):
             logging.warning("필터 적용 후 페이지 로드에 문제가 발생했으나 계속 진행합니다.")
 
         # 총 공고 수 계산
@@ -155,7 +134,7 @@ def crawl_jobkorea_multiple_pages(days: int = 1):
             next_page = page.query_selector(f'div.tplPagination li a[data-page="{current_page + 1}"]')
             if next_page:
                 next_page.click()
-                if not safe_wait_networkidle(page, desc=f"{current_page+1}페이지 이동"):  # 페이지 전환
+                if not safe_wait(page, load_state="networkidle", desc=f"{current_page+1}페이지 이동", retries=3, timeout=30000):
                     logging.warning(f"{current_page+1}페이지 로드 실패, 반복 중단")
                     break
                 current_page += 1
@@ -163,7 +142,7 @@ def crawl_jobkorea_multiple_pages(days: int = 1):
                 more_button = page.query_selector('a.btnPgnNext')
                 if more_button and "disabled" not in (more_button.get_attribute("class") or ""):
                     more_button.click()
-                    if not safe_wait_networkidle(page, desc="다음 블록 이동"):  # 블록 전환
+                    if not safe_wait(page, load_state="networkidle", desc="다음 블록 이동", retries=3, timeout=30000):
                         logging.warning("다음 블록 로드 실패, 반복 중단")
                         break
                     current_page += 1

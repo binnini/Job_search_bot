@@ -34,15 +34,20 @@ def _match(recruit: RecruitOut, keyword: str, profile: ProfileOut) -> bool:
     return True
 
 
-def _format_recruit(i: int, r: RecruitOut) -> str:
-    return (
-        f"📌 [{i}] {r.announcement_name} @ {r.company_name}\n"
-        f"- 경력: {JobPreprocessor.stringify_experience(r.experience)}\n"
-        f"- 형태: {JobPreprocessor.stringify_form(r.form)}\n"
-        f"- 연봉: {JobPreprocessor.stringify_salary(r.annual_salary)}\n"
-        f"- 마감일: {JobPreprocessor.stringify_deadline(r.deadline)}\n"
-        f"🔗 {r.link}"
-    )
+def format_recruit(i: int, r: RecruitOut, include_education: bool = False) -> str:
+    lines = [
+        f"📌 [{i}] {r.announcement_name} @ {r.company_name}",
+        f"- 경력: {JobPreprocessor.stringify_experience(r.experience) or '무관'}",
+    ]
+    if include_education:
+        lines.append(f"- 학력: {JobPreprocessor.stringify_education(r.education) or '무관'}")
+    lines += [
+        f"- 형태: {JobPreprocessor.stringify_form(r.form) or '정보 없음'}",
+        f"- 연봉: {JobPreprocessor.stringify_salary(r.annual_salary) or '협의'}",
+        f"- 마감일: {JobPreprocessor.stringify_deadline(r.deadline)}",
+        f"🔗 {r.link}",
+    ]
+    return "\n".join(lines)
 
 
 async def notify_subscribers(client, skip_dedup: bool = False):
@@ -91,7 +96,7 @@ async def notify_subscribers(client, skip_dedup: bool = False):
             header = "🔍 [테스트] " if skip_dedup else "🔔 "
             lines = [f"{header}관심 조건에 맞는 공고 {len(to_notify)}건\n"]
             for i, r in enumerate(to_notify[:10], start=1):
-                lines.append(_format_recruit(i, r))
+                lines.append(format_recruit(i, r))
             msg = "\n\n".join(lines)
 
             if len(msg) > 1900:

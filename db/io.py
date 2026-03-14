@@ -1,5 +1,4 @@
 import pandas as pd
-from .base import connect_postgres
 from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, UserProfile, NotificationLog
 from .JobPreprocessor import JobPreprocessor
 from datetime import date, datetime, timedelta
@@ -7,14 +6,12 @@ from dataclasses import dataclass
 import logging
 from dotenv import load_dotenv
 import os
-import json
-from sqlalchemy import create_engine, func, or_
-from sqlalchemy.orm import sessionmaker, Session, joinedload
+from sqlalchemy import create_engine, or_
+from sqlalchemy.orm import sessionmaker, joinedload
 from typing import List, Optional
 
 
 load_dotenv(override=True)
-RECRUIT_TITLE_ORG_PATH = os.getenv("RECRUIT_TITLE_ORG_PATH")
 
 # ──────────────────────────────
 # DATABASE CONNECTION
@@ -33,6 +30,23 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def _to_recruit_out(r: Recruit) -> RecruitOut:
+    return RecruitOut(
+        id=r.id,
+        company_name=r.company.company_name,
+        announcement_name=r.announcement_name,
+        link=r.link,
+        deadline=r.deadline,
+        annual_salary=r.annual_salary,
+        experience=r.experience,
+        education=r.education,
+        form=r.form,
+        tags=[tag.name for tag in r.tags],
+        region_name=r.subregion.region.name if r.subregion and r.subregion.region else None,
+    )
+
 
 # ──────────────────────────────
 # DATA READING & DELETE
@@ -58,22 +72,7 @@ def read_recruitOut(limit: int = 10000, order_desc: bool = False) -> List[Recrui
             query = query.order_by(Recruit.id.asc())
 
         data = query.limit(limit).all()
-
-        return [
-            RecruitOut(
-                id=r.id,
-                company_name=r.company.company_name,
-                announcement_name=r.announcement_name,
-                link=r.link,
-                deadline=r.deadline,
-                annual_salary=r.annual_salary,
-                experience=r.experience,
-                education=r.education,
-                form=r.form,
-                tags=[tag.name for tag in r.tags],
-                region_name=r.subregion.region.name if r.subregion and r.subregion.region else None
-            ) for r in data
-        ]
+        return [_to_recruit_out(r) for r in data]
     finally:
         session.close()
 
@@ -90,64 +89,59 @@ def search_recruits_by_filter(
     today = date.today()
     session = SessionLocal()
     try:
-        query = (
-            session.query(Recruit)
-            .options(
-                joinedload(Recruit.company),
-                joinedload(Recruit.subregion).joinedload(Subregion.region),
-                joinedload(Recruit.tags),
-            )
-            .filter(Recruit.deadline >= today)
-        )
-
-        if keyword:
-            for token in keyword.split():
-                query = query.filter(
-                    or_(
-                        Recruit.announcement_name.ilike(f"%{token}%"),
-                        Recruit.tags.any(Tag.name.ilike(f"%{token}%")),
-                    )
+        def _build_query(keyword_mode: str = 'and'):
+            q = (
+                session.query(Recruit)
+                .options(
+                    joinedload(Recruit.company),
+                    joinedload(Recruit.subregion).joinedload(Subregion.region),
+                    joinedload(Recruit.tags),
                 )
-        if min_deadline:
-            query = query.filter(Recruit.deadline >= min_deadline)
-        if min_annual_salary:
-            query = query.filter(Recruit.annual_salary >= min_annual_salary)
-        if company_name:
-            query = query.join(Recruit.company).filter(
-                Company.company_name.ilike(f"%{company_name}%")
+                .filter(Recruit.deadline >= today)
             )
-        if max_experience is not None:
-            query = query.filter(
-                or_(Recruit.experience == None, Recruit.experience <= max_experience)
-            )
-        if form is not None:
-            query = query.filter(Recruit.form == form)
-        if region:
-            query = (
-                query
-                .join(Recruit.subregion)
-                .join(Subregion.region)
-                .filter(Region.name.ilike(f"%{region}%"))
-            )
+            if keyword:
+                tokens = keyword.split()
+                if keyword_mode == 'and':
+                    for token in tokens:
+                        q = q.filter(or_(
+                            Recruit.announcement_name.ilike(f"%{token}%"),
+                            Recruit.tags.any(Tag.name.ilike(f"%{token}%")),
+                        ))
+                else:  # 'or' 폴백
+                    q = q.filter(or_(*[
+                        or_(
+                            Recruit.announcement_name.ilike(f"%{token}%"),
+                            Recruit.tags.any(Tag.name.ilike(f"%{token}%")),
+                        )
+                        for token in tokens
+                    ]))
+            if min_deadline:
+                q = q.filter(Recruit.deadline >= min_deadline)
+            if min_annual_salary:
+                q = q.filter(Recruit.annual_salary >= min_annual_salary)
+            if company_name:
+                q = q.join(Recruit.company).filter(
+                    Company.company_name.ilike(f"%{company_name}%")
+                )
+            if max_experience is not None:
+                q = q.filter(or_(Recruit.experience == None, Recruit.experience <= max_experience))
+            if form is not None:
+                q = q.filter(Recruit.form == form)
+            if region:
+                q = (
+                    q.join(Recruit.subregion)
+                    .join(Subregion.region)
+                    .filter(Region.name.ilike(f"%{region}%"))
+                )
+            return q
 
-        results = query.order_by(Recruit.id.desc()).limit(limit).all()
+        results = _build_query('and').order_by(Recruit.id.desc()).limit(limit).all()
 
-        return [
-            RecruitOut(
-                id=r.id,
-                company_name=r.company.company_name,
-                announcement_name=r.announcement_name,
-                link=r.link,
-                deadline=r.deadline,
-                annual_salary=r.annual_salary,
-                experience=r.experience,
-                education=r.education,
-                form=r.form,
-                tags=[tag.name for tag in r.tags],
-                region_name=r.subregion.region.name if r.subregion and r.subregion.region else None,
-            )
-            for r in results
-        ]
+        # AND 결과 없고 키워드가 여러 토큰이면 OR 폴백
+        if not results and keyword and len(keyword.split()) > 1:
+            results = _build_query('or').order_by(Recruit.id.desc()).limit(limit).all()
+
+        return [_to_recruit_out(r) for r in results]
     finally:
         session.close()
 
@@ -165,22 +159,7 @@ def read_recruits_by_ids(recruit_ids: List[int]) -> List[RecruitOut]:
             .all()
         )
 
-        return [
-            RecruitOut(
-                id=r.id,
-                company_name=r.company.company_name,
-                announcement_name=r.announcement_name,
-                link=r.link,
-                deadline=r.deadline,
-                annual_salary=r.annual_salary,
-                experience=r.experience,
-                education=r.education,
-                form=r.form,
-                tags=[tag.name for tag in r.tags],
-                region_name=r.subregion.region.name if r.subregion and r.subregion.region else None
-            )
-            for r in recruits
-        ]
+        return [_to_recruit_out(r) for r in recruits]
     finally:
         session.close()
 
@@ -199,22 +178,7 @@ def get_new_recruits(hours: int = 24) -> List[RecruitOut]:
             .filter(Recruit.created_at >= since)
             .all()
         )
-        return [
-            RecruitOut(
-                id=r.id,
-                company_name=r.company.company_name,
-                announcement_name=r.announcement_name,
-                link=r.link,
-                deadline=r.deadline,
-                annual_salary=r.annual_salary,
-                experience=r.experience,
-                education=r.education,
-                form=r.form,
-                tags=[tag.name for tag in r.tags],
-                region_name=r.subregion.region.name if r.subregion and r.subregion.region else None,
-            )
-            for r in recruits
-        ]
+        return [_to_recruit_out(r) for r in recruits]
     finally:
         session.close()
 
@@ -410,27 +374,62 @@ def get_notified_recruit_ids(discord_user_id: str) -> set:
 
 def save_notification_log(discord_user_id: str, recruit_ids: List[int]):
     """알림 발송 이력을 저장. 이미 존재하는 (user, recruit) 쌍은 무시."""
-    from .base import connect_postgres, release_connection
-    conn = connect_postgres()
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+    session = SessionLocal()
     try:
-        cursor = conn.cursor()
-        cursor.executemany("""
-            INSERT INTO notification_log (discord_user_id, recruit_id)
-            VALUES (%s, %s)
-            ON CONFLICT (discord_user_id, recruit_id) DO NOTHING
-        """, [(discord_user_id, rid) for rid in recruit_ids])
-        conn.commit()
+        for rid in recruit_ids:
+            stmt = pg_insert(NotificationLog).values(
+                discord_user_id=discord_user_id,
+                recruit_id=rid,
+            ).on_conflict_do_nothing()
+            session.execute(stmt)
+        session.commit()
     finally:
-        release_connection(conn)
+        session.close()
+
+
+def normalize_existing_tags() -> dict:
+    """TAG_SYNONYMS 기준으로 기존 DB 태그 정규화.
+
+    - old_tag만 있으면 이름 변경
+    - new_tag도 있으면 recruit_tags를 new_tag로 이전 후 old_tag 삭제
+    반환: {'renamed': [...], 'merged': [...], 'skipped': [...]}
+    """
+    from .JobPreprocessor import TAG_SYNONYMS
+    from sqlalchemy import text
+    session = SessionLocal()
+    report = {'renamed': [], 'merged': [], 'skipped': []}
+    try:
+        for old_name, new_name in TAG_SYNONYMS.items():
+            old_tag = session.query(Tag).filter_by(name=old_name).first()
+            if not old_tag:
+                report['skipped'].append(old_name)
+                continue
+
+            new_tag = session.query(Tag).filter_by(name=new_name).first()
+            if new_tag:
+                session.execute(text("""
+                    INSERT INTO recruit_tags (recruit_id, tag_id)
+                    SELECT recruit_id, :new_id FROM recruit_tags WHERE tag_id = :old_id
+                    ON CONFLICT DO NOTHING
+                """), {"new_id": new_tag.id, "old_id": old_tag.id})
+                session.execute(text("DELETE FROM recruit_tags WHERE tag_id = :old_id"), {"old_id": old_tag.id})
+                session.delete(old_tag)
+                report['merged'].append(f"{old_name} → {new_name}")
+            else:
+                old_tag.name = new_name
+                report['renamed'].append(f"{old_name} → {new_name}")
+
+        session.commit()
+        logging.info(f"태그 정규화 완료: {report}")
+        return report
+    finally:
+        session.close()
 
 
 def _read_table_as_dataframe(table_name):
-    conn = connect_postgres()
-    try:
-        df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
-        return df
-    finally:
-        conn.close()
+    with engine.connect() as conn:
+        return pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
 
 def read_recruits():
     return _read_table_as_dataframe("recruits")
@@ -451,12 +450,8 @@ def read_subregions():
     return _read_table_as_dataframe("subregions")
 
 def read_full_region_names():
-    """
-    regions와 subregions를 JOIN하여 full_region_name(예: 서울 강남구) 컬럼을 반환하는 DataFrame 생성
-    """
-    conn = connect_postgres()
-    try:
-        query = """
+    """regions + subregions JOIN → full_region_name(예: 서울 강남구) DataFrame 반환."""
+    query = """
         SELECT
             subregions.id AS subregion_id,
             regions.name AS region,
@@ -464,37 +459,18 @@ def read_full_region_names():
             regions.name || ' ' || subregions.name AS full_region_name
         FROM subregions
         JOIN regions ON subregions.region_id = regions.id
-        ORDER BY region, subregion;
-        """
-        df = pd.read_sql_query(query, conn)
-        return df
-    finally:
-        conn.close()
+        ORDER BY region, subregion
+    """
+    with engine.connect() as conn:
+        return pd.read_sql_query(query, conn)
+
 
 def delete_expired_jobs():
-    conn = connect_postgres()
-    cursor = conn.cursor()
+    session = SessionLocal()
+    try:
+        deleted = session.query(Recruit).filter(Recruit.deadline < date.today()).delete()
+        session.commit()
+        logging.info(f"{deleted}개의 마감된 공고가 삭제되었습니다.")
+    finally:
+        session.close()
 
-    today = date.today()
-    cursor.execute("DELETE FROM recruits WHERE deadline < %s", (today,))
-    deleted = cursor.rowcount
-
-    conn.commit()
-    conn.close()
-    logging.info(f"{deleted}개의 마감된 공고가 삭제되었습니다.")
-
-def export_titles_to_json():
-    # 1. DB에서 공고 테이블 로드
-    df = read_recruits()
-
-    # 2. 공고명 컬럼만 추출, NaN 제거
-    titles = df["announcement_name"].dropna().unique()
-
-    # 3. JSON 포맷에 맞게 변환
-    json_data = [{"text": title} for title in titles]
-
-    # 4. JSON 파일로 저장
-    with open(RECRUIT_TITLE_ORG_PATH, "w", encoding="utf-8") as f:
-        json.dump(json_data, f, ensure_ascii=False, indent=2)
-
-    print(f"✅ {len(json_data)}개 공고명을 '{RECRUIT_TITLE_ORG_PATH}'에 저장했습니다.")

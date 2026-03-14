@@ -34,8 +34,6 @@
     │    ├─ 자연어 검색  →  extract_filters (정규식) → SQL WHERE 절
     │    ├─ 구독 등록/해제 (드롭다운 UI)
     │    └─ 정기 알림 (24h 백그라운드 태스크)
-    │
-    └─ [FastAPI]  (선택적 REST API)
 ```
 
 ### 검색 흐름

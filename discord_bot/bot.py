@@ -5,6 +5,7 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 from discord_bot.llm import sql_search, extract_filters
 from discord_bot.notifier import notify_subscribers
+from discord_bot.views import SubscriptionView, _describe_subscription
 from db.base import ensure_tables
 from db.io import (
     save_subscription, delete_subscription, delete_all_subscriptions,
@@ -18,21 +19,6 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
-
-def _describe_subscription(sub) -> str:
-    """구독 조건을 사람이 읽기 좋은 문자열로 변환."""
-    parts = []
-    if sub.keyword:
-        parts.append(f"키워드: {sub.keyword}")
-    if sub.region:
-        parts.append(f"지역: {sub.region}")
-    if sub.form is not None:
-        parts.append(f"고용형태: {JobPreprocessor.stringify_form(sub.form)}")
-    if sub.max_experience is not None:
-        parts.append(f"최대경력: {JobPreprocessor.stringify_experience(sub.max_experience)}")
-    if sub.min_annual_salary is not None:
-        parts.append(f"최소연봉: {JobPreprocessor.stringify_salary(sub.min_annual_salary)}")
-    return ", ".join(parts) if parts else "(조건 없음)"
 
 
 @client.event
@@ -62,6 +48,21 @@ async def on_message(message):
 
     content = message.content.strip()
     if not content:
+        return
+
+    # ── !도움 ──────────────────────────────────────────────
+    if content.startswith("!도움"):
+        await message.channel.send(
+            "**📖 사용 가능한 명령어**\n\n"
+            "`!구독` — 대화형 체크리스트로 구독 조건 등록\n"
+            "`!내구독` — 내 구독 목록 확인\n"
+            "`!구독해제 <번호>` — 특정 구독 해제 (번호는 `!내구독` 참고)\n"
+            "`!구독해제 전체` — 모든 구독 해제\n"
+            "`!알림테스트` — 지금 즉시 알림 조건 확인 및 DM 발송\n\n"
+            "**🔍 공고 검색**\n"
+            "명령어 없이 자연어로 입력하면 공고를 검색합니다.\n"
+            "예) `백엔드 서울 정규직 신입`, `카카오 공고`, `연봉 5000만원 이상`"
+        )
         return
 
     # ── !알림테스트 ────────────────────────────────────────
@@ -97,7 +98,7 @@ async def on_message(message):
     if content.startswith("!내구독"):
         subs = get_subscriptions(str(message.author.id))
         if not subs:
-            await message.channel.send("구독 중인 조건이 없습니다. `!구독 <조건>`으로 등록하세요.")
+            await message.channel.send("구독 중인 조건이 없습니다. `!구독`으로 등록하세요.")
         else:
             lines = [f"📋 내 구독 목록 ({len(subs)}/{MAX_SUBSCRIPTIONS_PER_USER}개)\n"]
             for i, sub in enumerate(subs, start=1):
@@ -107,34 +108,11 @@ async def on_message(message):
 
     # ── !구독 ──────────────────────────────────────────────
     if content.startswith("!구독"):
-        condition = content[len("!구독"):].strip()
-        if not condition:
-            await message.channel.send(
-                "구독 조건을 입력해 주세요.\n예) `!구독 백엔드 서울 정규직 신입`"
-            )
-            return
-
-        filters = extract_filters(condition)
-        form_code = JobPreprocessor.parse_form(filters.get('form') or '')
-
-        ok, err = save_subscription(
-            discord_user_id=str(message.author.id),
-            keyword=filters.get('keyword'),
-            region=filters.get('region'),
-            form=form_code,
-            max_experience=filters.get('max_experience'),
-            min_annual_salary=filters.get('min_annual_salary'),
-        )
-        if not ok:
-            await message.channel.send(f"❌ {err}")
-            return
-
-        subs = get_subscriptions(str(message.author.id))
-        new_sub = subs[-1]
+        view = SubscriptionView(discord_user_id=str(message.author.id))
         await message.channel.send(
-            f"✅ 구독이 등록되었습니다! ({len(subs)}/{MAX_SUBSCRIPTIONS_PER_USER}개)\n"
-            f"{_describe_subscription(new_sub)}\n"
-            f"조건에 맞는 신규 공고가 올라오면 DM으로 알려드립니다."
+            f"📋 구독 조건을 선택해주세요. ({MAX_SUBSCRIPTIONS_PER_USER}개까지 등록 가능)\n"
+            "원하지 않는 항목은 **상관없음**으로 두세요.",
+            view=view,
         )
         return
 

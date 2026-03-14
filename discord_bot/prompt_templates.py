@@ -1,22 +1,33 @@
 from langchain_core.prompts import PromptTemplate
 
 recruit_filter_prompt = PromptTemplate.from_template("""
-아래의 질문에서 채용 조건을 추출해줘.
-가능한 조건: 기업명(company_name), 최소마감기한(min_deadline), 최소연봉(annual_salary)
-                                              
-최소마감기한은 yyyy/mm/dd 형식이고 사용자가 특정 month를 지정하는 경우 그 달의 1일을 min_deadline으로 설정해. 그리고 오늘 내일, 이번주 같은 명령어도 {today}를 오늘로 삼고 계산해서 보내줘. 예를 들어, "8월에 모집하는 공고 보여줘"라고 질문이 오면 {today}에서 수집한 년도 yyyy/08/01 형태가 되는거야.
-최소연봉은 만원 단위로 설정해줘.
+아래 채용 공고 검색 질문에서 조건을 추출해줘.
 
-만약 조건을 모르겠다면 null로 설정해줘.
-형식은 JSON으로 출력해줘.
+추출할 조건:
+- keyword: 직무/기술 키워드 (예: "백엔드", "Python", "React"). 없으면 null
+- company_name: 기업명. 없으면 null
+- min_deadline: 최소 마감일 (yyyy/mm/dd). 없으면 null
+- min_annual_salary: 최소 연봉 (만원 단위 정수). 없으면 null
+- max_experience: 최대 요구 경력 연수 (정수). 신입이면 0. 없으면 null
+- form: 고용형태 (정규직/계약직/인턴/파견직/프리랜서 중 하나). 없으면 null
+- region: 근무 지역 (예: "서울", "부산"). 없으면 null
+
+규칙:
+- min_deadline: 특정 월 지정 시 그 달 1일로 설정 (예: "8월" → {today_year}/08/01)
+- "오늘", "이번주" 등 상대적 날짜는 오늘({today}) 기준으로 계산
+- JSON만 출력하고 설명은 쓰지 마
 
 질문: {query}
-                                                                                            
+
 예시:
 {{
-  "company_name": "카카오",
-  "min_deadline": "2025/07/04",
-  "min_annual_salary": "5000",
+  "keyword": "백엔드",
+  "company_name": null,
+  "min_deadline": "2026/08/01",
+  "min_annual_salary": 5000,
+  "max_experience": 3,
+  "form": "정규직",
+  "region": "서울"
 }}
 
 JSON 결과:

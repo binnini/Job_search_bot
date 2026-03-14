@@ -1,12 +1,10 @@
 from langchain_community.llms import Ollama
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+from langchain_core.output_parsers import JsonOutputParser
 from dotenv import load_dotenv
 from discord_bot.prompt_templates import recruit_filter_prompt
-from rag.vector_db_manager import vector_similar_search
 import os
 from datetime import date, datetime
-from db.io import read_recruits_by_ids
+from db.io import search_recruits_by_filter
 from db.JobPreprocessor import JobPreprocessor
 
 load_dotenv()
@@ -18,34 +16,35 @@ llm = Ollama(
 
 def recruit_filter(query):
     chain = recruit_filter_prompt | llm | JsonOutputParser()
-    response = chain.invoke({"today":date.today(),"query":query})
-    return build_filter(response)
+    return chain.invoke({"today": date.today(), "today_year": date.today().year, "query": query})
 
-def build_filter(metadata: dict) -> dict:
-    filter_query = {}
+def sql_search(query, limit=5):
+    filters = recruit_filter(query)
 
-    # # 연봉 필터 처리
-    # salary = metadata.get("min_annual_salary")
-    # if salary:
-    #     filter_query["annual_salary"] = {"$gte": int(salary)}
+    min_deadline = None
+    raw_deadline = filters.get("min_deadline")
+    if raw_deadline:
+        try:
+            min_deadline = datetime.strptime(raw_deadline, "%Y/%m/%d").date()
+        except ValueError:
+            pass
 
-    # 마감일 필터 처리
-    deadline = metadata.get("min_deadline")
-    if deadline:
-        filter_query["deadline"] = {"$gte": deadline}
+    form_code = JobPreprocessor.parse_form(filters.get("form") or "")
 
-    # # 기업명 필터 (정확히 일치할 경우만 필터링)
-    # company = metadata.get("company_name")
-    # if company:
-    #     filter_query["company_name"] = {"$eq": company}
+    recruits = search_recruits_by_filter(
+        keyword=filters.get("keyword"),
+        min_deadline=min_deadline,
+        min_annual_salary=filters.get("min_annual_salary"),
+        company_name=filters.get("company_name"),
+        max_experience=filters.get("max_experience"),
+        form=form_code,
+        region=filters.get("region"),
+        limit=limit,
+    )
 
-    return filter_query
+    if not recruits:
+        return "조건에 맞는 채용 공고를 찾지 못했습니다."
 
-def rag_search(query,k=5):
-    filter = recruit_filter(query)
-    docs = vector_similar_search(query, filter, k)
-    ids = [doc.id for doc in docs]
-    recruits = read_recruits_by_ids(ids)
     result_lines = []
     for i, r in enumerate(recruits, start=1):
         result_lines.append(

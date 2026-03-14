@@ -1,13 +1,13 @@
 import pandas as pd
 from .base import connect_postgres
-from .models import Recruit, Subregion, RecruitOut
+from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region
 from .JobPreprocessor import JobPreprocessor
 from datetime import date
 import logging
 from dotenv import load_dotenv
 import os
 import json
-from sqlalchemy import create_engine, func
+from sqlalchemy import create_engine, func, or_
 from sqlalchemy.orm import sessionmaker, Session, joinedload
 from typing import List
 
@@ -72,6 +72,79 @@ def read_recruitOut(limit: int = 10000, order_desc: bool = False) -> List[Recrui
                 tags=[tag.name for tag in r.tags],
                 region_name=r.subregion.region.name if r.subregion and r.subregion.region else None
             ) for r in data
+        ]
+    finally:
+        session.close()
+
+def search_recruits_by_filter(
+    keyword: str = None,
+    min_deadline=None,
+    min_annual_salary: int = None,
+    company_name: str = None,
+    max_experience: int = None,
+    form: int = None,
+    region: str = None,
+    limit: int = 5,
+) -> List[RecruitOut]:
+    today = date.today()
+    session = SessionLocal()
+    try:
+        query = (
+            session.query(Recruit)
+            .options(
+                joinedload(Recruit.company),
+                joinedload(Recruit.subregion).joinedload(Subregion.region),
+                joinedload(Recruit.tags),
+            )
+            .filter(Recruit.deadline >= today)
+        )
+
+        if keyword:
+            query = query.filter(
+                or_(
+                    Recruit.announcement_name.ilike(f"%{keyword}%"),
+                    Recruit.tags.any(Tag.name.ilike(f"%{keyword}%")),
+                )
+            )
+        if min_deadline:
+            query = query.filter(Recruit.deadline >= min_deadline)
+        if min_annual_salary:
+            query = query.filter(Recruit.annual_salary >= min_annual_salary)
+        if company_name:
+            query = query.join(Recruit.company).filter(
+                Company.company_name.ilike(f"%{company_name}%")
+            )
+        if max_experience is not None:
+            query = query.filter(
+                or_(Recruit.experience == None, Recruit.experience <= max_experience)
+            )
+        if form is not None:
+            query = query.filter(Recruit.form == form)
+        if region:
+            query = (
+                query
+                .join(Recruit.subregion)
+                .join(Subregion.region)
+                .filter(Region.name.ilike(f"%{region}%"))
+            )
+
+        results = query.order_by(Recruit.id.desc()).limit(limit).all()
+
+        return [
+            RecruitOut(
+                id=r.id,
+                company_name=r.company.company_name,
+                announcement_name=r.announcement_name,
+                link=r.link,
+                deadline=r.deadline,
+                annual_salary=r.annual_salary,
+                experience=r.experience,
+                education=r.education,
+                form=r.form,
+                tags=[tag.name for tag in r.tags],
+                region_name=r.subregion.region.name if r.subregion and r.subregion.region else None,
+            )
+            for r in results
         ]
     finally:
         session.close()

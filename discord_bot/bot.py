@@ -1,7 +1,7 @@
 import discord
 import os
 from dotenv import load_dotenv
-from discord_bot.llm import recruit_filter, rag_search
+from discord_bot.llm import sql_search
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
@@ -25,7 +25,7 @@ async def on_message(message):
     await message.channel.send("잠시만 기다려 주세요...")
 
     try:
-        response = rag_search(query,k=5)
+        response = sql_search(query, limit=5)
         # 응답이 너무 길면 나눠서 전송
         if len(response) > 1900:
             chunks = [response[i:i+1900] for i in range(0, len(response), 1900)]

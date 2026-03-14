@@ -32,25 +32,21 @@
 ```
 [잡코리아]
     │ Playwright 크롤링 (매일 06:00, cron job)
+    │ 5페이지마다 batch_to_db() 직접 적재
     ▼
-[CSV (일별 스냅샷)]
-    │ ETL 파이프라인 (JobPreprocessor)
+[PostgreSQL]
+    │
+    │
+[Discord 사용자]
+    │ 자연어 질문
     ▼
-[PostgreSQL] ◄──────────────────────────────┐
-    │ KR-SBERT 임베딩                        │
-    ▼                                        │
-[FAISS 벡터 DB]                             │
-                                             │
-[Discord 사용자]                             │
-    │ 자연어 질문                             │
-    ▼                                        │
-[Local LLM, Gemma3:4b]                      │
-    │ 필터 추출 (JSON)                        │
-    ▼                                        │
-[FAISS MMR 유사도 검색] → Top-5 ID ────────►│
-                                    상세 조회 │
-                                             ▼
-                                    [결과 → Discord]
+[Local LLM, Gemma3:4b]
+    │ 필터 추출 (keyword, deadline, salary, experience, form, region)
+    ▼
+[PostgreSQL SQL 쿼리]
+    │ announcement_name / tags ILIKE + WHERE 절
+    ▼
+[결과 → Discord]
 ```
 
 ### ETL 파이프라인
@@ -58,8 +54,8 @@
 ```
 Extract          Transform                   Load
 크롤링      →    JobPreprocessor        →    PostgreSQL
-(Playwright)     - 경력/학력/형태 인코딩     FAISS
-                 - 마감일 파싱               (KR-SBERT 임베딩)
+(Playwright)     - 경력/학력/형태 인코딩     (batch_to_db, 5페이지 단위)
+                 - 마감일 파싱
                  - 월급 → 연봉 환산
                  - 태그 분리
 ```
@@ -79,18 +75,18 @@ regions ──< subregions ──< recruits >── companies
 - `tags`: 공고 설명 키워드 (M:N 관계)
 - 중복 방지: `UNIQUE(company_id, announcement_name, deadline)`
 
-### RAG 검색 흐름
+### 검색 흐름
 
 ```
 사용자 질문
     │
     ├─► Local LLM (Gemma3:4b)
     │       └─► JSON 필터 추출
-    │           { "min_deadline": "2025/08/01" }
+    │           { "keyword": "백엔드", "region": "서울",
+    │             "form": "정규직", "max_experience": 0 }
     │
-    ├─► KR-SBERT 임베딩 → FAISS MMR 검색 (Top-5 ID)
-    │
-    └─► PostgreSQL 상세 조회 → Discord 응답
+    └─► PostgreSQL SQL 쿼리 → Discord 응답
+        (announcement_name / tags ILIKE + WHERE 절)
 ```
 
 ---
@@ -126,31 +122,22 @@ ON CONFLICT (company_id, announcement_name, deadline) DO NOTHING;
 
 `companies`, `subregions`, `tags` 등 모든 참조 테이블에 동일 패턴 적용.
 
-### 3-3. 이중 저장소 설계
-
-| 저장소 | 역할 | 선택 이유 |
-|--------|------|-----------|
-| PostgreSQL | 조건 필터링 (마감일, 경력, 연봉 등) | 정형 데이터 범위 쿼리 |
-| FAISS | 의미 유사도 검색 (공고 제목) | 자연어 → 벡터 검색 |
-
-FAISS로 ID를 추출하고 PostgreSQL에서 상세 정보를 조회하는
-2단계 구조로 각 저장소의 강점을 분리했습니다.
-
-### 3-4. 벡터 DB 관리
-
-- **임베딩 모델**: `snunlp/KR-SBERT-V40K-klueNLI-augSTS` (한국어 특화)
-- **검색 방식**: MMR(Maximal Marginal Relevance) — 유사도 높은 결과 중 다양성 확보
-- **만료 문서 자동 삭제**: 매일 ETL 실행 시 `deadline < today` 문서를 인덱스에서 제거하여 최신성 유지
-
-### 3-5. Local LLM 기반 필터 추출
+### 3-3. LLM 기반 필터 추출 + SQL 검색
 
 ```
-입력: "8월까지 모집하는 백엔드 공고 보여줘"
-출력: { "min_deadline": "2025/08/01", "company_name": null }
+입력: "서울 신입 백엔드 정규직 공고 보여줘"
+출력: { "keyword": "백엔드", "region": "서울",
+        "max_experience": 0, "form": "정규직" }
 ```
 
-Ollama + Gemma3:4b를 로컬 실행하여 API 비용 없이 운영.
-프롬프트 엔지니어링과 정규 표현식 패턴을 조합하여 필터 추출 안정성을 높였습니다.
+Ollama + Gemma3:4b를 로컬 실행하여 API 비용 없이 운영합니다.
+LLM이 추출한 keyword는 `announcement_name`과 `tags` 테이블 양쪽에 `ILIKE` 검색으로 적용하고,
+연봉·경력·지역·고용형태는 정형 필드 그대로 `WHERE` 절에 사용합니다.
+
+초기에는 KR-SBERT + FAISS 벡터 검색을 도입했으나,
+임베딩 대상이 공고명 하나뿐이고 수집 데이터가 키워드 목록 형태라 시맨틱 검색 효과가 제한적이었습니다.
+또한 연봉·경력 등 핵심 조건이 정형 데이터여서 벡터 거리보다 SQL이 더 정확했습니다.
+(상세 내용: [트러블슈팅 #7](./TROUBLE_SHOOT.md))
 
 ### 3-6. 운영 환경
 
@@ -209,33 +196,31 @@ Playwright는 브라우저를 직접 제어하여 사람의 행동 패턴과 유
 
 ### 아쉬운 점
 
-**RAG 검색 품질**
-벡터 유사도 기반 검색이다 보니, 사용자의 다양한 자연어 표현에 일관된 품질을 내지 못했습니다.
-공고명과 태그 데이터로 직접 라벨링한 1,000건의 데이터로 LLM 파인튜닝을 시도해봤으나
-유의미한 성능 향상을 얻지 못했습니다.
-통계 기반 유사도 검색의 근본적인 한계였고, LLM 기반 re-ranking이나
-하이브리드 검색(키워드 + 벡터) 도입이 필요하다고 생각합니다.
-
-**파이프라인 안정성**
-CSV를 중간 매개체로 사용하는 구조여서, 파일 유실 시 PostgreSQL과 FAISS의 데이터가
-불일치할 수 있는 구조적 취약점이 있습니다.
-크롤러에서 DB로 직접 적재하는 방식으로 개선이 필요합니다.
-
 **엔지니어링 성숙도**
-행마다 DB 연결을 새로 맺는 구조, FAISS 인덱스를 매 검색마다 디스크에서 로드하는 방식 등
-처음 구현 당시 엔지니어링 지식이 부족하여 성능 측면에서 미흡한 부분이 있습니다.
+처음 구현 당시 행마다 DB 연결을 새로 맺는 구조, FAISS 인덱스를 매 검색마다 디스크에서 로드하는 방식,
+CSV를 파이프라인 중간 허브로 사용하는 구조 등 성능·안정성 측면에서 미흡한 부분이 있었습니다.
+이후 Connection Pool 도입, 모듈 레벨 캐싱, 크롤러 → DB 직접 적재로 순차적으로 개선했습니다.
+
+**검색 방식 선택**
+초기에 FAISS 벡터 검색을 도입했으나 운영하면서 이 프로젝트의 데이터 특성과
+사용 패턴에는 적합하지 않다는 것을 확인했습니다.
+공고명과 태그 데이터로 직접 라벨링한 1,000건의 데이터로 LLM 파인튜닝도 시도했으나
+유의미한 성능 향상을 얻지 못했고, 결국 LLM 필터 추출 + SQL 쿼리 방식으로 전환했습니다.
+
+**운영 모니터링 부재**
+ETL 실패 시 알림이 없어 수동으로 확인해야 하는 구조입니다.
 
 ---
 
 ## 7. 개선 방향
 
-| 한계 | 개선 방향 |
-|------|----------|
-| CSV 경유 파이프라인 — DB·FAISS 불일치 가능성 | 크롤러 → DB 직접 적재 |
-| 매 검색마다 FAISS 디스크 로드 | 앱 기동 시 1회 로드, 메모리 유지 |
-| 행마다 DB 연결 생성 | Connection Pool 도입 |
-| ETL 실패 시 알림 없음 | Discord 알림 또는 모니터링 연동 |
-| 통계 기반 검색의 질의 다양성 한계 | 하이브리드 검색 또는 LLM re-ranking 도입 |
+| 한계 | 개선 방향 | 상태 |
+|------|----------|------|
+| CSV 경유 파이프라인 — DB 불일치 가능성 | 크롤러 → DB 직접 적재 | ✅ 완료 |
+| 매 검색마다 FAISS 디스크 로드 | 앱 기동 시 1회 로드, 메모리 유지 | ✅ 완료 |
+| 행마다 DB 연결 생성 | Connection Pool 도입 | ✅ 완료 |
+| FAISS 벡터 검색의 품질·리소스 한계 | LLM 필터 추출 + SQL 직접 쿼리 | ✅ 완료 |
+| ETL 실패 시 알림 없음 | Discord 알림 또는 모니터링 연동 | 🔲 미완료 |
 
 ---
 
@@ -246,9 +231,7 @@ CSV를 중간 매개체로 사용하는 구조여서, 파일 유실 시 PostgreS
 | 크롤링 | Playwright |
 | ETL / 데이터 처리 | Python, Pandas |
 | 정형 DB | PostgreSQL, SQLAlchemy |
-| 벡터 DB | FAISS, LangChain |
-| 임베딩 | KR-SBERT (HuggingFace) |
-| LLM | Ollama, Gemma3:4b |
+| LLM | Ollama, Gemma3:4b, LangChain |
 | API 서버 | FastAPI, uvicorn |
 | 봇 인터페이스 | discord.py |
 | 자동화 | cron job, systemd |

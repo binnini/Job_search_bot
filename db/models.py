@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Tabl
 from sqlalchemy.orm import relationship
 from typing import List, Optional
 from datetime import date, datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 Base = declarative_base()
 
@@ -101,5 +101,4 @@ class RecruitOut(BaseModel):
     region_name: Optional[str]
     tags: List[str]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

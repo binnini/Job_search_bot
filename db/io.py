@@ -1,6 +1,6 @@
 import pandas as pd
 from .base import connect_postgres
-from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription
+from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, NotificationLog
 from .JobPreprocessor import JobPreprocessor
 from datetime import date, datetime, timedelta
 from dataclasses import dataclass
@@ -314,6 +314,37 @@ def get_all_subscriptions() -> List[SubscriptionOut]:
         ]
     finally:
         session.close()
+
+
+# ──────────────────────────────
+# NOTIFICATION LOG
+# ──────────────────────────────
+def get_notified_recruit_ids(discord_user_id: str) -> set:
+    """해당 사용자에게 이미 알림 발송한 recruit_id 집합을 반환."""
+    session = SessionLocal()
+    try:
+        rows = session.query(NotificationLog.recruit_id).filter_by(
+            discord_user_id=discord_user_id
+        ).all()
+        return {row[0] for row in rows}
+    finally:
+        session.close()
+
+
+def save_notification_log(discord_user_id: str, recruit_ids: List[int]):
+    """알림 발송 이력을 저장. 이미 존재하는 (user, recruit) 쌍은 무시."""
+    from .base import connect_postgres, release_connection
+    conn = connect_postgres()
+    try:
+        cursor = conn.cursor()
+        cursor.executemany("""
+            INSERT INTO notification_log (discord_user_id, recruit_id)
+            VALUES (%s, %s)
+            ON CONFLICT (discord_user_id, recruit_id) DO NOTHING
+        """, [(discord_user_id, rid) for rid in recruit_ids])
+        conn.commit()
+    finally:
+        release_connection(conn)
 
 
 def _read_table_as_dataframe(table_name):

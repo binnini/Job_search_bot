@@ -60,6 +60,14 @@ class Tag(Base):
 
     recruits = relationship("Recruit", secondary=recruit_tags, back_populates="tags")
 
+class NotificationLog(Base):
+    __tablename__ = "notification_log"
+    id = Column(Integer, primary_key=True)
+    discord_user_id = Column(String, nullable=False)
+    recruit_id = Column(Integer, ForeignKey("recruits.id", ondelete="CASCADE"), nullable=False)
+    notified_at = Column(DateTime, default=datetime.now)
+
+
 class UserSubscription(Base):
     __tablename__ = "user_subscriptions"
     id = Column(Integer, primary_key=True)

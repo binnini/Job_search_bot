@@ -1,5 +1,8 @@
 import logging
-from db.io import get_all_subscriptions, get_new_recruits, SubscriptionOut, RecruitOut
+from db.io import (
+    get_all_subscriptions, get_new_recruits, SubscriptionOut, RecruitOut,
+    get_notified_recruit_ids, save_notification_log,
+)
 from db.JobPreprocessor import JobPreprocessor
 
 
@@ -54,10 +57,18 @@ async def notify_subscribers(client):
         if not matched:
             continue
 
+        # 이미 알림 발송한 공고 제외
+        already_notified = get_notified_recruit_ids(sub.discord_user_id)
+        to_notify = [r for r in matched if r.id not in already_notified]
+
+        if not to_notify:
+            logging.info(f"user={sub.discord_user_id}: 매칭 {len(matched)}건 모두 이미 발송됨, 생략")
+            continue
+
         try:
             user = await client.fetch_user(int(sub.discord_user_id))
-            lines = [f"🔔 관심 조건에 맞는 신규 공고 {len(matched)}건이 등록되었습니다!\n"]
-            for i, r in enumerate(matched[:10], start=1):
+            lines = [f"🔔 관심 조건에 맞는 신규 공고 {len(to_notify)}건이 등록되었습니다!\n"]
+            for i, r in enumerate(to_notify[:10], start=1):
                 lines.append(_format_recruit(i, r))
             msg = "\n\n".join(lines)
 
@@ -68,6 +79,8 @@ async def notify_subscribers(client):
             else:
                 await user.send(msg)
 
-            logging.info(f"알림 전송 완료 → user={sub.discord_user_id}, 매칭={len(matched)}건")
+            # 발송 성공 후 이력 저장
+            save_notification_log(sub.discord_user_id, [r.id for r in to_notify])
+            logging.info(f"알림 전송 완료 → user={sub.discord_user_id}, {len(to_notify)}건 (중복 제외 {len(matched) - len(to_notify)}건)")
         except Exception as e:
             logging.warning(f"알림 전송 실패 (user={sub.discord_user_id}): {e}")

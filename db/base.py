@@ -143,6 +143,17 @@ def create_tables(conn, cursor):
         ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()
         """)
 
+        # 알림 발송 이력
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notification_log (
+            id SERIAL PRIMARY KEY,
+            discord_user_id TEXT NOT NULL,
+            recruit_id INTEGER REFERENCES recruits(id) ON DELETE CASCADE,
+            notified_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE (discord_user_id, recruit_id)
+        );
+        """)
+
         # 구독 테이블
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_subscriptions (

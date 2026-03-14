@@ -7,11 +7,6 @@
 
 잡코리아 채용 공고를 매일 자동 수집하고, 디스코드에서 자연어로 검색하거나 관심 조건을 구독해두면 신규 공고를 DM으로 받을 수 있는 봇입니다.
 
-<div align="center">
-  <img src="img/job_search_bot1.png" alt="봇 사용 예시 1" width="600"/>
-  <img src="img/job_search_bot2.png" alt="봇 사용 예시 2" width="600"/>
-</div>
-
 ---
 
 ## 주요 기능

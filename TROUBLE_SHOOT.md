@@ -675,3 +675,93 @@ keyword = ' '.join(tokens).strip()
 실패 1건(`[50] 제주 데이터 분석 정규직 신입 연봉 5000만원 이상`)은 DB에 조건을 만족하는 공고가 없는 케이스로, 의도된 결과입니다.
 
 ---
+
+## 16. 중복 코드 · 데드 코드 누적
+
+### Problem
+
+프로젝트가 커지면서 더 이상 사용되지 않는 코드와 동일한 로직이 여러 곳에 반복되는 문제가 생겼습니다.
+
+**① 데드 코드 — 삭제된 기능의 잔재**
+
+| 파일 | 이유 |
+|------|------|
+| `rag/`, `NER/` | FAISS 벡터 검색·NER 파이프라인 제거 후 디렉토리만 남음 |
+| `crawling/saver.py` | `batch_to_db()` 도입 후 CSV 저장 함수 미사용 |
+| `discord_bot/prompt_templates.py` | LangChain 제거 후 프롬프트 템플릿 미사용 |
+| `db/io.py export_titles_to_json()` | NER 모듈 전용 함수, 의존 모듈 삭제됨 |
+
+**② 중복 코드 — RecruitOut 변환 블록**
+
+`read_recruitOut`, `search_recruits_by_filter`, `read_recruits_by_ids`, `get_new_recruits` 4개 함수에서 동일한 11줄짜리 `RecruitOut(...)` 변환 블록이 반복되었습니다. 필드 하나를 추가하려면 4곳을 모두 수정해야 했습니다.
+
+**③ 중복 코드 — 공고 포매팅 문자열**
+
+`discord_bot/notifier.py`의 `_format_recruit()`와 `discord_bot/llm.py`의 `sql_search()` 내부에 거의 동일한 공고 출력 포매팅 코드가 따로 존재했습니다.
+
+**④ 중복 코드 — `safe_wait_networkidle` 내부 함수**
+
+`crawling/scraper.py` 안에 `safe_wait_networkidle()` 내부 함수가 정의되어 있었는데, `crawling/utils.py`의 `safe_wait()`과 동일한 로직(재시도 + 리로드)이었습니다.
+
+### Solution
+
+**① 데드 코드 삭제**
+
+`rag/`, `NER/`, `crawling/saver.py`, `discord_bot/prompt_templates.py`, `export_titles_to_json()`을 모두 제거했습니다.
+
+**② `_to_recruit_out()` 헬퍼 추출 (db/io.py)**
+
+```python
+def _to_recruit_out(r: Recruit) -> RecruitOut:
+    return RecruitOut(
+        id=r.id,
+        company_name=r.company.company_name,
+        ...
+        region_name=r.subregion.region.name if r.subregion and r.subregion.region else None,
+    )
+```
+
+4개 함수의 변환 블록을 `[_to_recruit_out(r) for r in results]` 한 줄로 교체했습니다.
+
+**③ `format_recruit()` 공개화 (discord_bot/notifier.py)**
+
+`_format_recruit` → `format_recruit`으로 이름을 바꾸고 `include_education` 파라미터를 추가했습니다. `llm.py`에서 이를 import하여 인라인 포매팅 블록을 제거했습니다.
+
+```python
+# discord_bot/llm.py
+from discord_bot.notifier import format_recruit
+
+result_lines = [format_recruit(i, r, include_education=True) for i, r in enumerate(recruits, start=1)]
+```
+
+**④ `safe_wait` 재사용 (crawling/scraper.py)**
+
+`safe_wait_networkidle` 내부 함수(22줄)를 삭제하고 4개 호출부를 `utils.safe_wait(load_state='networkidle', ...)` 로 교체했습니다.
+
+---
+
+## 17. 소스 파일이 gitignored 디렉토리에 위치하는 문제
+
+### Problem
+
+로깅 설정 모듈인 `logs/log.py`가 런타임 로그 파일이 쌓이는 `logs/` 디렉토리 안에 있었습니다.
+
+`.gitignore`에 `logs/`가 등록되어 있어 소스 파일이 git에서 무시되어야 하는 상황이었습니다. 실제로는 명시적으로 트래킹되고 있었지만, 이후 `git add .` 실행 시 의도치 않게 추적이 끊길 수 있는 구조적 위험이 있었습니다.
+
+또한 테스트 파일이 루트(`test_search.py`, `test_quality.py`, `test_subscription.py`)와 `tests/` 디렉토리에 분산되어 있었고, 테스트 결과 파일(`test_results.txt` 등)도 루트에 생성되어 저장소가 지저분해졌습니다.
+
+### Solution
+
+**① `logs/log.py` → `log_config.py` (루트 이동)**
+
+소스 파일을 런타임 산출물 디렉토리 밖으로 꺼냈습니다. `main.py`와 `db/base.py`의 import를 `import log_config`로 수정했습니다.
+
+**② 통합 테스트 파일 `tests/` 통합**
+
+루트의 `test_search.py`, `test_quality.py`, `test_subscription.py`를 모두 `tests/`로 이동했습니다. 단위 테스트(`pytest`)와 통합 테스트가 한 디렉토리에서 관리됩니다.
+
+**③ 테스트 결과 파일 경로 고정 및 gitignore 추가**
+
+각 테스트 파일의 출력 경로를 `os.path.dirname(__file__)` 기준으로 고정하여 실행 위치에 무관하게 `tests/` 내부에 결과가 저장되도록 했습니다. `.gitignore`에 `tests/*.txt`를 추가하여 결과 파일이 커밋되지 않도록 했습니다. `test_snapshots.json`은 회귀 테스트 기준선이므로 커밋 대상으로 유지했습니다.
+
+---

@@ -1,8 +1,8 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from typing import List, Optional
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel
 
 Base = declarative_base()
@@ -47,6 +47,8 @@ class Recruit(Base):
     deadline = Column(Date)
     link = Column(String)
 
+    created_at = Column(DateTime, default=datetime.now)
+
     company = relationship("Company", back_populates="recruits")
     subregion = relationship("Subregion", back_populates="recruits")
     tags = relationship("Tag", secondary=recruit_tags, back_populates="recruits")
@@ -57,6 +59,18 @@ class Tag(Base):
     name = Column(String, unique=True, nullable=False)
 
     recruits = relationship("Recruit", secondary=recruit_tags, back_populates="tags")
+
+class UserSubscription(Base):
+    __tablename__ = "user_subscriptions"
+    id = Column(Integer, primary_key=True)
+    discord_user_id = Column(String, unique=True, nullable=False)
+    keyword = Column(String, nullable=True)
+    region = Column(String, nullable=True)
+    form = Column(Integer, nullable=True)
+    max_experience = Column(Integer, nullable=True)
+    min_annual_salary = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
 
 class RecruitOut(BaseModel):
     id: int

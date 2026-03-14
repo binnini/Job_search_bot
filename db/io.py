@@ -1,15 +1,16 @@
 import pandas as pd
 from .base import connect_postgres
-from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region
+from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription
 from .JobPreprocessor import JobPreprocessor
-from datetime import date
+from datetime import date, datetime, timedelta
+from dataclasses import dataclass
 import logging
 from dotenv import load_dotenv
 import os
 import json
 from sqlalchemy import create_engine, func, or_
 from sqlalchemy.orm import sessionmaker, Session, joinedload
-from typing import List
+from typing import List, Optional
 
 
 load_dotenv(override=True)
@@ -182,6 +183,138 @@ def read_recruits_by_ids(recruit_ids: List[int]) -> List[RecruitOut]:
         ]
     finally:
         session.close()
+
+def get_new_recruits(hours: int = 24) -> List[RecruitOut]:
+    """최근 N시간 이내에 추가된 신규 공고를 반환."""
+    since = datetime.now() - timedelta(hours=hours)
+    session = SessionLocal()
+    try:
+        recruits = (
+            session.query(Recruit)
+            .options(
+                joinedload(Recruit.company),
+                joinedload(Recruit.subregion).joinedload(Subregion.region),
+                joinedload(Recruit.tags),
+            )
+            .filter(Recruit.created_at >= since)
+            .all()
+        )
+        return [
+            RecruitOut(
+                id=r.id,
+                company_name=r.company.company_name,
+                announcement_name=r.announcement_name,
+                link=r.link,
+                deadline=r.deadline,
+                annual_salary=r.annual_salary,
+                experience=r.experience,
+                education=r.education,
+                form=r.form,
+                tags=[tag.name for tag in r.tags],
+                region_name=r.subregion.region.name if r.subregion and r.subregion.region else None,
+            )
+            for r in recruits
+        ]
+    finally:
+        session.close()
+
+
+# ──────────────────────────────
+# SUBSCRIPTION DATA CLASS
+# ──────────────────────────────
+@dataclass
+class SubscriptionOut:
+    discord_user_id: str
+    keyword: Optional[str]
+    region: Optional[str]
+    form: Optional[int]
+    max_experience: Optional[int]
+    min_annual_salary: Optional[int]
+
+
+# ──────────────────────────────
+# SUBSCRIPTION CRUD
+# ──────────────────────────────
+def save_subscription(
+    discord_user_id: str,
+    keyword: str = None,
+    region: str = None,
+    form: int = None,
+    max_experience: int = None,
+    min_annual_salary: int = None,
+):
+    session = SessionLocal()
+    try:
+        existing = session.query(UserSubscription).filter_by(discord_user_id=discord_user_id).first()
+        if existing:
+            existing.keyword = keyword
+            existing.region = region
+            existing.form = form
+            existing.max_experience = max_experience
+            existing.min_annual_salary = min_annual_salary
+        else:
+            session.add(UserSubscription(
+                discord_user_id=discord_user_id,
+                keyword=keyword,
+                region=region,
+                form=form,
+                max_experience=max_experience,
+                min_annual_salary=min_annual_salary,
+            ))
+        session.commit()
+    finally:
+        session.close()
+
+
+def delete_subscription(discord_user_id: str) -> bool:
+    session = SessionLocal()
+    try:
+        sub = session.query(UserSubscription).filter_by(discord_user_id=discord_user_id).first()
+        if sub:
+            session.delete(sub)
+            session.commit()
+            return True
+        return False
+    finally:
+        session.close()
+
+
+def get_subscription(discord_user_id: str) -> Optional[SubscriptionOut]:
+    session = SessionLocal()
+    try:
+        s = session.query(UserSubscription).filter_by(discord_user_id=discord_user_id).first()
+        if not s:
+            return None
+        return SubscriptionOut(
+            discord_user_id=s.discord_user_id,
+            keyword=s.keyword,
+            region=s.region,
+            form=s.form,
+            max_experience=s.max_experience,
+            min_annual_salary=s.min_annual_salary,
+        )
+    finally:
+        session.close()
+
+
+def get_all_subscriptions() -> List[SubscriptionOut]:
+    session = SessionLocal()
+    try:
+        subs = session.query(UserSubscription).all()
+        return [
+            SubscriptionOut(
+                discord_user_id=s.discord_user_id,
+                keyword=s.keyword,
+                region=s.region,
+                form=s.form,
+                max_experience=s.max_experience,
+                min_annual_salary=s.min_annual_salary,
+            )
+            for s in subs
+        ]
+    finally:
+        session.close()
+
 
 def _read_table_as_dataframe(table_name):
     conn = connect_postgres()

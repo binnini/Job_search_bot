@@ -136,6 +136,26 @@ def create_tables(conn, cursor):
         );
         """)
 
+        # recruits.created_at 컬럼 마이그레이션 (기존 테이블 대응)
+        cursor.execute("""
+        ALTER TABLE recruits
+        ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()
+        """)
+
+        # 구독 테이블
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_subscriptions (
+            id SERIAL PRIMARY KEY,
+            discord_user_id TEXT UNIQUE NOT NULL,
+            keyword TEXT,
+            region TEXT,
+            form INTEGER,
+            max_experience INTEGER,
+            min_annual_salary INTEGER,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+        """)
+
         logging.info("테이블 생성 완료")
     except Exception as e:
         logging.error(f"테이블 생성 중 오류 발생: {e}")
@@ -145,6 +165,17 @@ def create_tables(conn, cursor):
 # ──────────────────────────────
 # DATA INSERTION
 # ──────────────────────────────
+def ensure_tables():
+    """봇 시작 시 등 단독으로 테이블을 보장할 때 사용."""
+    conn = connect_postgres()
+    try:
+        cursor = conn.cursor()
+        create_tables(conn, cursor)
+        conn.commit()
+    finally:
+        release_connection(conn)
+
+
 def batch_to_db(data_batch):
     """크롤링된 배치 데이터를 직접 DB에 삽입.
     data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, position, link] 리스트의 리스트."""

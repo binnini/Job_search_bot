@@ -1,6 +1,6 @@
 import pandas as pd
 from .base import connect_postgres
-from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, NotificationLog
+from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, UserProfile, NotificationLog
 from .JobPreprocessor import JobPreprocessor
 from datetime import date, datetime, timedelta
 from dataclasses import dataclass
@@ -220,33 +220,105 @@ def get_new_recruits(hours: int = 24) -> List[RecruitOut]:
 
 
 # ──────────────────────────────
-# SUBSCRIPTION DATA CLASS
+# PROFILE & SUBSCRIPTION DATA CLASSES
 # ──────────────────────────────
 @dataclass
-class SubscriptionOut:
+class ProfileOut:
     discord_user_id: str
-    keyword: Optional[str]
     region: Optional[str]
     form: Optional[int]
     max_experience: Optional[int]
     min_annual_salary: Optional[int]
 
 
-# ──────────────────────────────
-# SUBSCRIPTION CRUD
-# ──────────────────────────────
-MAX_SUBSCRIPTIONS_PER_USER = 5
+@dataclass
+class SubscriptionOut:
+    id: int
+    discord_user_id: str
+    keyword: Optional[str]
 
 
-def save_subscription(
+# ──────────────────────────────
+# PROFILE CRUD
+# ──────────────────────────────
+def save_user_profile(
     discord_user_id: str,
-    keyword: str = None,
     region: str = None,
     form: int = None,
     max_experience: int = None,
     min_annual_salary: int = None,
-) -> tuple:
-    """구독 추가. (성공 여부, 메시지) 반환."""
+) -> None:
+    """사용자 프로필 저장 (없으면 생성, 있으면 덮어쓰기)."""
+    session = SessionLocal()
+    try:
+        profile = session.query(UserProfile).filter_by(
+            discord_user_id=discord_user_id
+        ).first()
+        if profile:
+            profile.region = region
+            profile.form = form
+            profile.max_experience = max_experience
+            profile.min_annual_salary = min_annual_salary
+        else:
+            session.add(UserProfile(
+                discord_user_id=discord_user_id,
+                region=region,
+                form=form,
+                max_experience=max_experience,
+                min_annual_salary=min_annual_salary,
+            ))
+        session.commit()
+    finally:
+        session.close()
+
+
+def get_user_profile(discord_user_id: str) -> Optional[ProfileOut]:
+    """사용자 프로필 반환. 없으면 None."""
+    session = SessionLocal()
+    try:
+        p = session.query(UserProfile).filter_by(
+            discord_user_id=discord_user_id
+        ).first()
+        if not p:
+            return None
+        return ProfileOut(
+            discord_user_id=p.discord_user_id,
+            region=p.region,
+            form=p.form,
+            max_experience=p.max_experience,
+            min_annual_salary=p.min_annual_salary,
+        )
+    finally:
+        session.close()
+
+
+def get_all_user_profiles() -> dict:
+    """전체 사용자 프로필 {discord_user_id: ProfileOut} 반환 (알림 발송용)."""
+    session = SessionLocal()
+    try:
+        profiles = session.query(UserProfile).all()
+        return {
+            p.discord_user_id: ProfileOut(
+                discord_user_id=p.discord_user_id,
+                region=p.region,
+                form=p.form,
+                max_experience=p.max_experience,
+                min_annual_salary=p.min_annual_salary,
+            )
+            for p in profiles
+        }
+    finally:
+        session.close()
+
+
+# ──────────────────────────────
+# SUBSCRIPTION CRUD (키워드 전용)
+# ──────────────────────────────
+MAX_SUBSCRIPTIONS_PER_USER = 5
+
+
+def save_subscription(discord_user_id: str, keyword: str = None) -> tuple:
+    """키워드 구독 추가. (성공 여부, 메시지) 반환."""
     session = SessionLocal()
     try:
         count = session.query(UserSubscription).filter_by(
@@ -257,10 +329,6 @@ def save_subscription(
         session.add(UserSubscription(
             discord_user_id=discord_user_id,
             keyword=keyword,
-            region=region,
-            form=form,
-            max_experience=max_experience,
-            min_annual_salary=min_annual_salary,
         ))
         session.commit()
         return True, None
@@ -298,21 +366,14 @@ def delete_all_subscriptions(discord_user_id: str) -> int:
 
 
 def get_subscriptions(discord_user_id: str) -> List[SubscriptionOut]:
-    """사용자의 모든 구독 목록 반환."""
+    """사용자의 키워드 구독 목록 반환."""
     session = SessionLocal()
     try:
         subs = session.query(UserSubscription).filter_by(
             discord_user_id=discord_user_id
         ).order_by(UserSubscription.id).all()
         return [
-            SubscriptionOut(
-                discord_user_id=s.discord_user_id,
-                keyword=s.keyword,
-                region=s.region,
-                form=s.form,
-                max_experience=s.max_experience,
-                min_annual_salary=s.min_annual_salary,
-            )
+            SubscriptionOut(id=s.id, discord_user_id=s.discord_user_id, keyword=s.keyword)
             for s in subs
         ]
     finally:
@@ -320,19 +381,12 @@ def get_subscriptions(discord_user_id: str) -> List[SubscriptionOut]:
 
 
 def get_all_subscriptions() -> List[SubscriptionOut]:
-    """전체 사용자의 모든 구독 반환 (알림 발송용)."""
+    """전체 사용자의 키워드 구독 반환 (알림 발송용)."""
     session = SessionLocal()
     try:
         subs = session.query(UserSubscription).all()
         return [
-            SubscriptionOut(
-                discord_user_id=s.discord_user_id,
-                keyword=s.keyword,
-                region=s.region,
-                form=s.form,
-                max_experience=s.max_experience,
-                min_annual_salary=s.min_annual_salary,
-            )
+            SubscriptionOut(id=s.id, discord_user_id=s.discord_user_id, keyword=s.keyword)
             for s in subs
         ]
     finally:

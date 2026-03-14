@@ -5,11 +5,11 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 from discord_bot.llm import sql_search, extract_filters
 from discord_bot.notifier import notify_subscribers
-from discord_bot.views import SubscriptionView, _describe_subscription
+from discord_bot.views import SubscriptionView, _describe_profile
 from db.base import ensure_tables
 from db.io import (
     save_subscription, delete_subscription, delete_all_subscriptions,
-    get_subscriptions, MAX_SUBSCRIPTIONS_PER_USER,
+    get_subscriptions, get_user_profile, MAX_SUBSCRIPTIONS_PER_USER,
 )
 from db.JobPreprocessor import JobPreprocessor
 
@@ -54,10 +54,11 @@ async def on_message(message):
     if content.startswith("!도움"):
         await message.channel.send(
             "**📖 사용 가능한 명령어**\n\n"
-            "`!구독` — 대화형 체크리스트로 구독 조건 등록\n"
-            "`!내구독` — 내 구독 목록 확인\n"
-            "`!구독해제 <번호>` — 특정 구독 해제 (번호는 `!내구독` 참고)\n"
-            "`!구독해제 전체` — 모든 구독 해제\n"
+            "`!구독` — 필터(지역/고용형태/경력/연봉) + 키워드 등록\n"
+            "　　　　필터는 공통 적용, 키워드는 각각 별도 구독으로 관리\n"
+            "`!내구독` — 공통 필터 + 키워드 구독 목록 확인\n"
+            "`!구독해제 <번호>` — 특정 키워드 구독 해제 (번호는 `!내구독` 참고)\n"
+            "`!구독해제 전체` — 모든 키워드 구독 해제\n"
             "`!알림테스트` — 지금 즉시 알림 조건 확인 및 DM 발송\n\n"
             "**🔍 공고 검색**\n"
             "명령어 없이 자연어로 입력하면 공고를 검색합니다.\n"
@@ -96,14 +97,20 @@ async def on_message(message):
 
     # ── !내구독 ────────────────────────────────────────────
     if content.startswith("!내구독"):
-        subs = get_subscriptions(str(message.author.id))
-        if not subs:
-            await message.channel.send("구독 중인 조건이 없습니다. `!구독`으로 등록하세요.")
-        else:
-            lines = [f"📋 내 구독 목록 ({len(subs)}/{MAX_SUBSCRIPTIONS_PER_USER}개)"]
+        uid = str(message.author.id)
+        profile = get_user_profile(uid)
+        subs = get_subscriptions(uid)
+
+        lines = ["**📋 내 구독 현황**\n"]
+        lines.append("**[공통 필터]**")
+        lines.append(_describe_profile(profile))
+        lines.append(f"\n**[키워드 구독]** ({len(subs)}/{MAX_SUBSCRIPTIONS_PER_USER}개)")
+        if subs:
             for i, sub in enumerate(subs, start=1):
-                lines.append(f"\n**[{i}]**\n{_describe_subscription(sub)}")
-            await message.channel.send("\n".join(lines))
+                lines.append(f"[{i}] {sub.keyword or '(키워드 없음)'}")
+        else:
+            lines.append("등록된 키워드가 없습니다. `!구독`으로 등록하세요.")
+        await message.channel.send("\n".join(lines))
         return
 
     # ── !구독 ──────────────────────────────────────────────

@@ -68,15 +68,23 @@ class NotificationLog(Base):
     notified_at = Column(DateTime, default=datetime.now)
 
 
-class UserSubscription(Base):
-    __tablename__ = "user_subscriptions"
-    id = Column(Integer, primary_key=True)
-    discord_user_id = Column(String, unique=True, nullable=False)
-    keyword = Column(String, nullable=True)
+class UserProfile(Base):
+    """사용자 공통 필터 (지역/고용형태/경력/연봉). 사용자당 1개."""
+    __tablename__ = "user_profiles"
+    discord_user_id = Column(String, primary_key=True)
     region = Column(String, nullable=True)
     form = Column(Integer, nullable=True)
     max_experience = Column(Integer, nullable=True)
     min_annual_salary = Column(Integer, nullable=True)
+    updated_at = Column(DateTime, default=datetime.now)
+
+
+class UserSubscription(Base):
+    """키워드 구독. 사용자당 최대 N개."""
+    __tablename__ = "user_subscriptions"
+    id = Column(Integer, primary_key=True)
+    discord_user_id = Column(String, nullable=False)
+    keyword = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 
 

@@ -154,16 +154,24 @@ def create_tables(conn, cursor):
         );
         """)
 
-        # 구독 테이블
+        # 사용자 프로필 (공통 필터)
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS user_subscriptions (
-            id SERIAL PRIMARY KEY,
-            discord_user_id TEXT UNIQUE NOT NULL,
-            keyword TEXT,
+        CREATE TABLE IF NOT EXISTS user_profiles (
+            discord_user_id TEXT PRIMARY KEY,
             region TEXT,
             form INTEGER,
             max_experience INTEGER,
             min_annual_salary INTEGER,
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+        """)
+
+        # 키워드 구독 테이블
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_subscriptions (
+            id SERIAL PRIMARY KEY,
+            discord_user_id TEXT NOT NULL,
+            keyword TEXT,
             created_at TIMESTAMP DEFAULT NOW()
         );
         """)
@@ -183,11 +191,6 @@ def create_tables(conn, cursor):
         );
         """)
 
-        # user_subscriptions.discord_user_id UNIQUE 제약 제거 (다중 구독 지원)
-        cursor.execute("""
-            ALTER TABLE user_subscriptions
-            DROP CONSTRAINT IF EXISTS user_subscriptions_discord_user_id_key
-        """)
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_user_sub_user_id
             ON user_subscriptions(discord_user_id)

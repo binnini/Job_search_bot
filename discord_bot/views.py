@@ -1,15 +1,18 @@
 import discord
-from db.io import save_subscription, get_subscriptions, MAX_SUBSCRIPTIONS_PER_USER
+from db.io import (
+    save_subscription, save_user_profile, get_subscriptions, MAX_SUBSCRIPTIONS_PER_USER,
+)
 from db.JobPreprocessor import JobPreprocessor
 
 
-def _describe_subscription(sub) -> str:
+def _describe_profile(profile) -> str:
+    if profile is None:
+        return "지역: 상관없음\n고용형태: 상관없음\n최대경력: 상관없음\n최소연봉: 상관없음"
     return (
-        f"키워드: {sub.keyword or '상관없음'}\n"
-        f"지역: {sub.region or '상관없음'}\n"
-        f"고용형태: {JobPreprocessor.stringify_form(sub.form) if sub.form is not None else '상관없음'}\n"
-        f"최대경력: {JobPreprocessor.stringify_experience(sub.max_experience) if sub.max_experience is not None else '상관없음'}\n"
-        f"최소연봉: {JobPreprocessor.stringify_salary(sub.min_annual_salary) if sub.min_annual_salary is not None else '상관없음'}"
+        f"지역: {profile.region or '상관없음'}\n"
+        f"고용형태: {JobPreprocessor.stringify_form(profile.form) if profile.form is not None else '상관없음'}\n"
+        f"최대경력: {JobPreprocessor.stringify_experience(profile.max_experience) if profile.max_experience is not None else '상관없음'}\n"
+        f"최소연봉: {JobPreprocessor.stringify_salary(profile.min_annual_salary) if profile.min_annual_salary is not None else '상관없음'}"
     )
 
 
@@ -144,43 +147,39 @@ class SubscriptionView(discord.ui.View):
     ):
         await interaction.response.send_modal(KeywordModal(self))
 
-    @discord.ui.button(label="구독 등록", style=discord.ButtonStyle.primary, row=4)
+    @discord.ui.button(label="저장", style=discord.ButtonStyle.primary, row=4)
     async def submit_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
-        if all(
-            v is None
-            for v in [
-                self.region,
-                self.form,
-                self.max_experience,
-                self.min_annual_salary,
-                self.keyword,
-            ]
-        ):
+        if self.keyword is None:
             await interaction.response.send_message(
-                "❌ 조건을 하나 이상 선택해주세요.", ephemeral=True
+                "❌ 키워드를 입력해주세요.", ephemeral=True
             )
             return
 
-        ok, err = save_subscription(
+        # 프로필(공통 필터) 저장 — 기존 값 덮어쓰기
+        save_user_profile(
             discord_user_id=self.discord_user_id,
-            keyword=self.keyword,
             region=self.region,
             form=self.form,
             max_experience=self.max_experience,
             min_annual_salary=self.min_annual_salary,
+        )
+
+        # 키워드 구독 추가
+        ok, err = save_subscription(
+            discord_user_id=self.discord_user_id,
+            keyword=self.keyword,
         )
         if not ok:
             await interaction.response.send_message(f"❌ {err}", ephemeral=True)
             return
 
         subs = get_subscriptions(self.discord_user_id)
-        new_sub = subs[-1]
         await interaction.response.edit_message(
             content=(
-                f"✅ 구독이 등록되었습니다! ({len(subs)}/{MAX_SUBSCRIPTIONS_PER_USER}개)\n"
-                f"{_describe_subscription(new_sub)}\n"
+                f"✅ 구독이 등록되었습니다! (키워드 {len(subs)}/{MAX_SUBSCRIPTIONS_PER_USER}개)\n"
+                f"키워드: **{self.keyword}**\n"
                 f"조건에 맞는 신규 공고가 올라오면 DM으로 알려드립니다."
             ),
             view=None,

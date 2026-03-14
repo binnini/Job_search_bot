@@ -1,33 +1,35 @@
 import logging
 from collections import defaultdict
 from db.io import (
-    get_all_subscriptions, get_new_recruits, SubscriptionOut, RecruitOut,
+    get_all_subscriptions, get_all_user_profiles, get_new_recruits,
+    SubscriptionOut, ProfileOut, RecruitOut,
     get_notified_recruit_ids, save_notification_log,
 )
 from db.JobPreprocessor import JobPreprocessor
 
 
-def _match(recruit: RecruitOut, sub: SubscriptionOut) -> bool:
-    """공고가 구독 조건에 부합하는지 검사."""
-    if sub.keyword:
-        tokens = sub.keyword.split()
+def _match(recruit: RecruitOut, keyword: str, profile: ProfileOut) -> bool:
+    """공고가 (키워드 + 프로필 필터) 조건에 부합하는지 검사."""
+    if keyword:
+        tokens = keyword.split()
         all_text = (recruit.announcement_name or '') + ' ' + ' '.join(recruit.tags)
         if not all(token.lower() in all_text.lower() for token in tokens):
             return False
 
-    if sub.region and recruit.region_name and sub.region not in recruit.region_name:
-        return False
-
-    if sub.form is not None and recruit.form != sub.form:
-        return False
-
-    if sub.max_experience is not None and recruit.experience is not None:
-        if recruit.experience > sub.max_experience:
+    if profile:
+        if profile.region and recruit.region_name and profile.region not in recruit.region_name:
             return False
 
-    if sub.min_annual_salary is not None and recruit.annual_salary is not None:
-        if recruit.annual_salary < sub.min_annual_salary:
+        if profile.form is not None and recruit.form != profile.form:
             return False
+
+        if profile.max_experience is not None and recruit.experience is not None:
+            if recruit.experience > profile.max_experience:
+                return False
+
+        if profile.min_annual_salary is not None and recruit.annual_salary is not None:
+            if recruit.annual_salary < profile.min_annual_salary:
+                return False
 
     return True
 
@@ -51,20 +53,23 @@ async def notify_subscribers(client):
         return
 
     subscriptions = get_all_subscriptions()
+    profiles = get_all_user_profiles()  # {discord_user_id: ProfileOut}
     logging.info(f"알림 처리 시작: 신규 공고 {len(new_recruits)}건, 구독 {len(subscriptions)}개")
 
-    # 사용자별로 구독을 묶어서 처리 (다중 구독 → 사용자당 1회 DM)
-    user_subs: dict = defaultdict(list)
+    # 사용자별로 키워드를 묶어서 처리 (사용자당 1회 DM)
+    user_keywords: dict = defaultdict(list)
     for sub in subscriptions:
-        user_subs[sub.discord_user_id].append(sub)
+        user_keywords[sub.discord_user_id].append(sub.keyword)
 
-    for discord_user_id, subs in user_subs.items():
-        # 모든 구독 조건의 매칭 결과를 합산 (중복 제거)
+    for discord_user_id, keywords in user_keywords.items():
+        profile = profiles.get(discord_user_id)
+
+        # 모든 키워드 매칭 결과를 합산 (중복 제거)
         seen_ids: set = set()
         matched: list = []
-        for sub in subs:
+        for keyword in keywords:
             for r in new_recruits:
-                if r.id not in seen_ids and _match(r, sub):
+                if r.id not in seen_ids and _match(r, keyword, profile):
                     seen_ids.add(r.id)
                     matched.append(r)
 

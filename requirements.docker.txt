@@ -1,0 +1,18 @@
+# Core DB
+sqlalchemy==2.0.41
+psycopg2-binary==2.9.10
+pandas==2.2.3
+
+# Web / API
+fastapi==0.115.12
+uvicorn==0.34.2
+pydantic==2.11.5
+
+# Discord bot
+discord.py==2.5.2
+
+# Crawling
+playwright==1.52.0
+
+# Utils
+python-dotenv==1.1.0

@@ -1,0 +1,70 @@
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: job_search_postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI ─────────────────────────────────────────────────────
+  api:
+    build: .
+    container_name: job_search_api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    command: uvicorn api_server.api_server:app --host 0.0.0.0 --port 9000
+    ports:
+      - "9000:9000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Discord Bot ─────────────────────────────────────────────────
+  bot:
+    build: .
+    container_name: job_search_bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    command: python discord_bot/bot.py
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Crawler (수동 실행) ──────────────────────────────────────────
+  # 사용법:
+  #   docker compose run --rm crawler                  # 최근 1일
+  #   docker compose run --rm crawler --days 14        # 최근 14일
+  #   docker compose run --rm crawler --days 14 --fresh  # 전체 초기화 후 재수집
+  crawler:
+    build: .
+    container_name: job_search_crawler
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+    command: python main.py
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - crawler  # 기본 up 에서는 시작되지 않음
+
+volumes:
+  postgres_data:

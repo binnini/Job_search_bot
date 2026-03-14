@@ -235,6 +235,9 @@ class SubscriptionOut:
 # ──────────────────────────────
 # SUBSCRIPTION CRUD
 # ──────────────────────────────
+MAX_SUBSCRIPTIONS_PER_USER = 5
+
+
 def save_subscription(
     discord_user_id: str,
     keyword: str = None,
@@ -242,62 +245,82 @@ def save_subscription(
     form: int = None,
     max_experience: int = None,
     min_annual_salary: int = None,
-):
+) -> tuple:
+    """구독 추가. (성공 여부, 메시지) 반환."""
     session = SessionLocal()
     try:
-        existing = session.query(UserSubscription).filter_by(discord_user_id=discord_user_id).first()
-        if existing:
-            existing.keyword = keyword
-            existing.region = region
-            existing.form = form
-            existing.max_experience = max_experience
-            existing.min_annual_salary = min_annual_salary
-        else:
-            session.add(UserSubscription(
-                discord_user_id=discord_user_id,
-                keyword=keyword,
-                region=region,
-                form=form,
-                max_experience=max_experience,
-                min_annual_salary=min_annual_salary,
-            ))
+        count = session.query(UserSubscription).filter_by(
+            discord_user_id=discord_user_id
+        ).count()
+        if count >= MAX_SUBSCRIPTIONS_PER_USER:
+            return False, f"구독은 최대 {MAX_SUBSCRIPTIONS_PER_USER}개까지 등록할 수 있습니다."
+        session.add(UserSubscription(
+            discord_user_id=discord_user_id,
+            keyword=keyword,
+            region=region,
+            form=form,
+            max_experience=max_experience,
+            min_annual_salary=min_annual_salary,
+        ))
         session.commit()
+        return True, None
     finally:
         session.close()
 
 
-def delete_subscription(discord_user_id: str) -> bool:
+def delete_subscription(discord_user_id: str, index: int) -> bool:
+    """1-based 인덱스로 사용자의 특정 구독 삭제."""
     session = SessionLocal()
     try:
-        sub = session.query(UserSubscription).filter_by(discord_user_id=discord_user_id).first()
-        if sub:
-            session.delete(sub)
-            session.commit()
-            return True
-        return False
+        subs = session.query(UserSubscription).filter_by(
+            discord_user_id=discord_user_id
+        ).order_by(UserSubscription.id).all()
+        if index < 1 or index > len(subs):
+            return False
+        session.delete(subs[index - 1])
+        session.commit()
+        return True
     finally:
         session.close()
 
 
-def get_subscription(discord_user_id: str) -> Optional[SubscriptionOut]:
+def delete_all_subscriptions(discord_user_id: str) -> int:
+    """사용자의 모든 구독 삭제. 삭제 건수 반환."""
     session = SessionLocal()
     try:
-        s = session.query(UserSubscription).filter_by(discord_user_id=discord_user_id).first()
-        if not s:
-            return None
-        return SubscriptionOut(
-            discord_user_id=s.discord_user_id,
-            keyword=s.keyword,
-            region=s.region,
-            form=s.form,
-            max_experience=s.max_experience,
-            min_annual_salary=s.min_annual_salary,
-        )
+        count = session.query(UserSubscription).filter_by(
+            discord_user_id=discord_user_id
+        ).delete()
+        session.commit()
+        return count
+    finally:
+        session.close()
+
+
+def get_subscriptions(discord_user_id: str) -> List[SubscriptionOut]:
+    """사용자의 모든 구독 목록 반환."""
+    session = SessionLocal()
+    try:
+        subs = session.query(UserSubscription).filter_by(
+            discord_user_id=discord_user_id
+        ).order_by(UserSubscription.id).all()
+        return [
+            SubscriptionOut(
+                discord_user_id=s.discord_user_id,
+                keyword=s.keyword,
+                region=s.region,
+                form=s.form,
+                max_experience=s.max_experience,
+                min_annual_salary=s.min_annual_salary,
+            )
+            for s in subs
+        ]
     finally:
         session.close()
 
 
 def get_all_subscriptions() -> List[SubscriptionOut]:
+    """전체 사용자의 모든 구독 반환 (알림 발송용)."""
     session = SessionLocal()
     try:
         subs = session.query(UserSubscription).all()

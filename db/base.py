@@ -183,6 +183,16 @@ def create_tables(conn, cursor):
         );
         """)
 
+        # user_subscriptions.discord_user_id UNIQUE 제약 제거 (다중 구독 지원)
+        cursor.execute("""
+            ALTER TABLE user_subscriptions
+            DROP CONSTRAINT IF EXISTS user_subscriptions_discord_user_id_key
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_user_sub_user_id
+            ON user_subscriptions(discord_user_id)
+        """)
+
         logging.info("테이블 생성 완료")
     except Exception as e:
         logging.error(f"테이블 생성 중 오류 발생: {e}")

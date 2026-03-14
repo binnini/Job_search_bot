@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from db.io import (
     get_all_subscriptions, get_new_recruits, SubscriptionOut, RecruitOut,
     get_notified_recruit_ids, save_notification_log,
@@ -50,23 +51,36 @@ async def notify_subscribers(client):
         return
 
     subscriptions = get_all_subscriptions()
-    logging.info(f"알림 처리 시작: 신규 공고 {len(new_recruits)}건, 구독자 {len(subscriptions)}명")
+    logging.info(f"알림 처리 시작: 신규 공고 {len(new_recruits)}건, 구독 {len(subscriptions)}개")
 
+    # 사용자별로 구독을 묶어서 처리 (다중 구독 → 사용자당 1회 DM)
+    user_subs: dict = defaultdict(list)
     for sub in subscriptions:
-        matched = [r for r in new_recruits if _match(r, sub)]
+        user_subs[sub.discord_user_id].append(sub)
+
+    for discord_user_id, subs in user_subs.items():
+        # 모든 구독 조건의 매칭 결과를 합산 (중복 제거)
+        seen_ids: set = set()
+        matched: list = []
+        for sub in subs:
+            for r in new_recruits:
+                if r.id not in seen_ids and _match(r, sub):
+                    seen_ids.add(r.id)
+                    matched.append(r)
+
         if not matched:
             continue
 
         # 이미 알림 발송한 공고 제외
-        already_notified = get_notified_recruit_ids(sub.discord_user_id)
+        already_notified = get_notified_recruit_ids(discord_user_id)
         to_notify = [r for r in matched if r.id not in already_notified]
 
         if not to_notify:
-            logging.info(f"user={sub.discord_user_id}: 매칭 {len(matched)}건 모두 이미 발송됨, 생략")
+            logging.info(f"user={discord_user_id}: 매칭 {len(matched)}건 모두 이미 발송됨, 생략")
             continue
 
         try:
-            user = await client.fetch_user(int(sub.discord_user_id))
+            user = await client.fetch_user(int(discord_user_id))
             lines = [f"🔔 관심 조건에 맞는 신규 공고 {len(to_notify)}건이 등록되었습니다!\n"]
             for i, r in enumerate(to_notify[:10], start=1):
                 lines.append(_format_recruit(i, r))
@@ -80,7 +94,7 @@ async def notify_subscribers(client):
                 await user.send(msg)
 
             # 발송 성공 후 이력 저장
-            save_notification_log(sub.discord_user_id, [r.id for r in to_notify])
-            logging.info(f"알림 전송 완료 → user={sub.discord_user_id}, {len(to_notify)}건 (중복 제외 {len(matched) - len(to_notify)}건)")
+            save_notification_log(discord_user_id, [r.id for r in to_notify])
+            logging.info(f"알림 전송 완료 → user={discord_user_id}, {len(to_notify)}건 (중복 제외 {len(matched) - len(to_notify)}건)")
         except Exception as e:
-            logging.warning(f"알림 전송 실패 (user={sub.discord_user_id}): {e}")
+            logging.warning(f"알림 전송 실패 (user={discord_user_id}): {e}")

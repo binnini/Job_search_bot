@@ -145,6 +145,37 @@ def create_tables(conn, cursor):
 # ──────────────────────────────
 # DATA INSERTION
 # ──────────────────────────────
+def batch_to_db(data_batch):
+    """크롤링된 배치 데이터를 직접 DB에 삽입. data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, link] 리스트의 리스트."""
+    conn = connect_postgres()
+    try:
+        cursor = conn.cursor()
+        create_tables(conn, cursor)
+        conn.commit()
+
+        for i, row in enumerate(data_batch):
+            try:
+                company, title, career, education, emp_type, location, salary, deadline, description, link = row
+                _jobkorea_write(
+                    conn=conn,
+                    cursor=cursor,
+                    company_name=company,
+                    announcement_name=title,
+                    experience=JobPreprocessor.parse_experience(career),
+                    education=JobPreprocessor.parse_education(education),
+                    form=JobPreprocessor.parse_form(emp_type),
+                    region=JobPreprocessor.parse_region(location),
+                    annual_salary=JobPreprocessor.parse_salary(salary),
+                    deadline=JobPreprocessor.parse_deadline(deadline),
+                    tags=JobPreprocessor.parse_explanation(description),
+                    link=link,
+                )
+            except Exception as e:
+                conn.rollback()
+                logging.warning(f"배치 {i}번째 행 처리 실패: {e}")
+    finally:
+        release_connection(conn)
+
 def csv_to_db(csv_path):
     conn = connect_postgres()
     try:

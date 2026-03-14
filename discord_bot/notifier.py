@@ -45,18 +45,20 @@ def _format_recruit(i: int, r: RecruitOut) -> str:
     )
 
 
-async def notify_subscribers(client):
-    """신규 공고를 조회하고 구독 조건에 맞는 사용자에게 DM을 발송."""
+async def notify_subscribers(client, skip_dedup: bool = False):
+    """신규 공고를 조회하고 구독 조건에 맞는 사용자에게 DM을 발송.
+
+    skip_dedup=True: 발송 이력 무시 (테스트용). 이력 저장도 하지 않음.
+    """
     new_recruits = get_new_recruits(hours=24)
     if not new_recruits:
         logging.info("신규 공고 없음 — 알림 생략")
         return
 
     subscriptions = get_all_subscriptions()
-    profiles = get_all_user_profiles()  # {discord_user_id: ProfileOut}
+    profiles = get_all_user_profiles()
     logging.info(f"알림 처리 시작: 신규 공고 {len(new_recruits)}건, 구독 {len(subscriptions)}개")
 
-    # 사용자별로 키워드를 묶어서 처리 (사용자당 1회 DM)
     user_keywords: dict = defaultdict(list)
     for sub in subscriptions:
         user_keywords[sub.discord_user_id].append(sub.keyword)
@@ -64,7 +66,6 @@ async def notify_subscribers(client):
     for discord_user_id, keywords in user_keywords.items():
         profile = profiles.get(discord_user_id)
 
-        # 모든 키워드 매칭 결과를 합산 (중복 제거)
         seen_ids: set = set()
         matched: list = []
         for keyword in keywords:
@@ -76,17 +77,19 @@ async def notify_subscribers(client):
         if not matched:
             continue
 
-        # 이미 알림 발송한 공고 제외
-        already_notified = get_notified_recruit_ids(discord_user_id)
-        to_notify = [r for r in matched if r.id not in already_notified]
-
-        if not to_notify:
-            logging.info(f"user={discord_user_id}: 매칭 {len(matched)}건 모두 이미 발송됨, 생략")
-            continue
+        if skip_dedup:
+            to_notify = matched
+        else:
+            already_notified = get_notified_recruit_ids(discord_user_id)
+            to_notify = [r for r in matched if r.id not in already_notified]
+            if not to_notify:
+                logging.info(f"user={discord_user_id}: 매칭 {len(matched)}건 모두 이미 발송됨, 생략")
+                continue
 
         try:
             user = await client.fetch_user(int(discord_user_id))
-            lines = [f"🔔 관심 조건에 맞는 신규 공고 {len(to_notify)}건이 등록되었습니다!\n"]
+            header = "🔍 [테스트] " if skip_dedup else "🔔 "
+            lines = [f"{header}관심 조건에 맞는 공고 {len(to_notify)}건\n"]
             for i, r in enumerate(to_notify[:10], start=1):
                 lines.append(_format_recruit(i, r))
             msg = "\n\n".join(lines)
@@ -98,8 +101,10 @@ async def notify_subscribers(client):
             else:
                 await user.send(msg)
 
-            # 발송 성공 후 이력 저장
-            save_notification_log(discord_user_id, [r.id for r in to_notify])
-            logging.info(f"알림 전송 완료 → user={discord_user_id}, {len(to_notify)}건 (중복 제외 {len(matched) - len(to_notify)}건)")
+            if not skip_dedup:
+                save_notification_log(discord_user_id, [r.id for r in to_notify])
+                logging.info(f"알림 전송 완료 → user={discord_user_id}, {len(to_notify)}건")
+            else:
+                logging.info(f"알림 테스트 전송 완료 → user={discord_user_id}, {len(to_notify)}건 (이력 저장 안함)")
         except Exception as e:
             logging.warning(f"알림 전송 실패 (user={discord_user_id}): {e}")

@@ -70,7 +70,7 @@ async def on_message(message):
     if content.startswith("!알림테스트"):
         await message.channel.send("🔍 알림 조건을 확인 중입니다...")
         try:
-            await notify_subscribers(client)
+            await notify_subscribers(client, skip_dedup=True)
             await message.channel.send("✅ 알림 테스트 완료. 조건에 맞는 공고가 있으면 DM을 확인하세요.")
         except Exception as e:
             await message.channel.send(f"❌ 알림 테스트 실패: {str(e)}")

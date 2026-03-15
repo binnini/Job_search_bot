@@ -1,0 +1,150 @@
+{
+  "summary": {
+    "avg_recall@10_before": 0.3778,
+    "avg_recall@10_after": 0.8889,
+    "delta": 0.5111
+  },
+  "results": [
+    {
+      "query": "ML엔지니어",
+      "synonyms": [
+        "머신러닝",
+        "machine learning",
+        "AI",
+        "인공지능"
+      ],
+      "recall@10_before": 0,
+      "recall@10_after": 0,
+      "delta": 0
+    },
+    {
+      "query": "백엔드",
+      "synonyms": [
+        "server",
+        "서버",
+        "API",
+        "Spring",
+        "Django"
+      ],
+      "results_count": 10,
+      "gt_count": 19,
+      "hits_name_only": 8,
+      "hits_tag_only": 2,
+      "recall@10_before": 0.8,
+      "recall@10_after": 1.0,
+      "delta": 0.2
+    },
+    {
+      "query": "프론트엔드",
+      "synonyms": [
+        "frontend",
+        "React",
+        "Vue",
+        "UI개발"
+      ],
+      "results_count": 10,
+      "gt_count": 18,
+      "hits_name_only": 2,
+      "hits_tag_only": 8,
+      "recall@10_before": 0.2,
+      "recall@10_after": 1.0,
+      "delta": 0.8
+    },
+    {
+      "query": "DevOps",
+      "synonyms": [
+        "인프라",
+        "CI/CD",
+        "Kubernetes",
+        "AWS"
+      ],
+      "results_count": 10,
+      "gt_count": 75,
+      "hits_name_only": 10,
+      "hits_tag_only": 0,
+      "recall@10_before": 1.0,
+      "recall@10_after": 1.0,
+      "delta": 0.0
+    },
+    {
+      "query": "데이터분석",
+      "synonyms": [
+        "analytics",
+        "SQL",
+        "Python",
+        "tableau"
+      ],
+      "results_count": 10,
+      "gt_count": 2,
+      "hits_name_only": 0,
+      "hits_tag_only": 10,
+      "recall@10_before": 0.0,
+      "recall@10_after": 1.0,
+      "delta": 1.0
+    },
+    {
+      "query": "UX디자인",
+      "synonyms": [
+        "사용자경험",
+        "UI/UX",
+        "Figma",
+        "프로토타입"
+      ],
+      "results_count": 10,
+      "gt_count": 1,
+      "hits_name_only": 1,
+      "hits_tag_only": 9,
+      "recall@10_before": 0.1,
+      "recall@10_after": 1.0,
+      "delta": 0.9
+    },
+    {
+      "query": "임베디드",
+      "synonyms": [
+        "펌웨어",
+        "firmware",
+        "RTOS",
+        "MCU"
+      ],
+      "results_count": 10,
+      "gt_count": 17,
+      "hits_name_only": 1,
+      "hits_tag_only": 9,
+      "recall@10_before": 0.1,
+      "recall@10_after": 1.0,
+      "delta": 0.9
+    },
+    {
+      "query": "클라우드",
+      "synonyms": [
+        "AWS",
+        "Azure",
+        "GCP",
+        "cloud"
+      ],
+      "results_count": 10,
+      "gt_count": 15,
+      "hits_name_only": 7,
+      "hits_tag_only": 3,
+      "recall@10_before": 0.7,
+      "recall@10_after": 1.0,
+      "delta": 0.3
+    },
+    {
+      "query": "보안",
+      "synonyms": [
+        "security",
+        "취약점",
+        "SIEM",
+        "침해"
+      ],
+      "results_count": 10,
+      "gt_count": 15,
+      "hits_name_only": 5,
+      "hits_tag_only": 5,
+      "recall@10_before": 0.5,
+      "recall@10_after": 1.0,
+      "delta": 0.5
+    }
+  ]
+}

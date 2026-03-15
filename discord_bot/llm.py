@@ -152,22 +152,36 @@ def extract_filters(query: str) -> dict:
 
 
 def sql_search(query, limit=5):
+    from discord_bot.keyword_expander import expand_keyword
+    from discord_bot.reranker import rerank
+
     filters = extract_filters(query)
+    keyword = filters.get('keyword')
     form_code = JobPreprocessor.parse_form(filters.get('form') or '')
 
+    # 방안 1: 키워드 확장 (keyword가 있을 때만)
+    expanded = expand_keyword(keyword) if keyword else None
+
+    # 확장 키워드로 후보를 넉넉하게 검색 (재순위 후 상위 limit건 반환)
+    candidate_limit = max(limit * 5, 50) if expanded else limit
     recruits = search_recruits_by_filter(
-        keyword=filters.get('keyword'),
+        keyword=keyword,
         min_deadline=filters.get('min_deadline'),
         min_annual_salary=filters.get('min_annual_salary'),
         company_name=filters.get('company_name'),
         max_experience=filters.get('max_experience'),
         form=form_code,
         region=filters.get('region'),
-        limit=limit,
+        limit=candidate_limit,
+        expanded_keywords=expanded,
     )
 
     if not recruits:
         return "조건에 맞는 채용 공고를 찾지 못했습니다."
 
-    result_lines = [format_recruit(i, r, include_education=True) for i, r in enumerate(recruits, start=1)]
+    # 방안 2: 재순위 후 상위 limit건
+    if keyword and len(recruits) > 1:
+        recruits = rerank(keyword, recruits)
+
+    result_lines = [format_recruit(i, r, include_education=True) for i, r in enumerate(recruits[:limit], start=1)]
     return "\n\n".join(result_lines)

@@ -85,6 +85,7 @@ def search_recruits_by_filter(
     form: int = None,
     region: str = None,
     limit: int = 5,
+    expanded_keywords: list = None,
 ) -> List[RecruitOut]:
     today = date.today()
     session = SessionLocal()
@@ -99,7 +100,16 @@ def search_recruits_by_filter(
                 )
                 .filter(Recruit.deadline >= today)
             )
-            if keyword:
+            if expanded_keywords:
+                # 확장 키워드 OR 매칭: 하나라도 공고명·태그에 포함되면 통과
+                q = q.filter(or_(*[
+                    or_(
+                        Recruit.announcement_name.ilike(f"%{kw}%"),
+                        Recruit.tags.any(Tag.name.ilike(f"%{kw}%")),
+                    )
+                    for kw in expanded_keywords
+                ]))
+            elif keyword:
                 tokens = keyword.split()
                 if keyword_mode == 'and':
                     for token in tokens:
@@ -137,8 +147,8 @@ def search_recruits_by_filter(
 
         results = _build_query('and').order_by(Recruit.id.desc()).limit(limit).all()
 
-        # AND 결과 없고 키워드가 여러 토큰이면 OR 폴백
-        if not results and keyword and len(keyword.split()) > 1:
+        # AND 결과 없고 키워드가 여러 토큰이면 OR 폴백 (expanded_keywords 미사용 시만)
+        if not results and not expanded_keywords and keyword and len(keyword.split()) > 1:
             results = _build_query('or').order_by(Recruit.id.desc()).limit(limit).all()
 
         return [_to_recruit_out(r) for r in results]

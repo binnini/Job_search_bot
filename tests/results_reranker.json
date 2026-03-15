@@ -1,0 +1,195 @@
+{
+  "summary": {
+    "avg_precision@10_before": 0.45,
+    "avg_precision@10_after": 0.64,
+    "delta": 0.19
+  },
+  "results": [
+    {
+      "keyword": "백엔드",
+      "expanded": [
+        "백엔드",
+        "백엔드개발자",
+        "서버사이드개발",
+        "API개발",
+        "풀스택조정",
+        "데이터베이스관리",
+        "자바스프링",
+        "파이썬프레임워크",
+        "RESTfulAPI",
+        "웹서비스구현",
+        "클라우드컴퓨팅",
+        "Node.js",
+        "Express.js"
+      ],
+      "candidates": 793,
+      "precision@10_before": 0.8,
+      "precision@10_after": 1.0,
+      "delta": 0.2
+    },
+    {
+      "keyword": "프론트엔드",
+      "expanded": [
+        "프론트엔드",
+        "프론트엔드개발자",
+        "웹개발자",
+        "UI개발자",
+        "프론트엔드엔지니어",
+        "React",
+        "Vue",
+        "Angular",
+        "JavaScript",
+        "TypeScript"
+      ],
+      "candidates": 1535,
+      "precision@10_before": 0.1,
+      "precision@10_after": 0.7,
+      "delta": 0.6
+    },
+    {
+      "keyword": "데이터엔지니어",
+      "expanded": [
+        "데이터엔지니어",
+        "데이터사이언티스트",
+        "데이터분석가",
+        "통계엔지니어",
+        "빅데이터엔지니어",
+        "ETL개발자",
+        "데이터워터리스트",
+        "데이터큐레이션",
+        "SQL",
+        "Python",
+        "Pandas",
+        "NumPy"
+      ],
+      "candidates": 492,
+      "precision@10_before": 0.0,
+      "precision@10_after": 0.2,
+      "delta": 0.2
+    },
+    {
+      "keyword": "ML엔지니어",
+      "expanded": [
+        "ML엔지니어",
+        "머신러닝엔지니어",
+        "딥러닝엔지니어",
+        "모델개발",
+        "Scikit-Learn",
+        "Keras",
+        "Pandas",
+        "Statsmodels"
+      ],
+      "candidates": 19,
+      "precision@10_before": 0.0,
+      "precision@10_after": 0.0,
+      "delta": 0.0
+    },
+    {
+      "keyword": "DevOps",
+      "expanded": [
+        "DevOps",
+        "DevOpsEngineer",
+        "CI/CD",
+        "InfrastructureasCode",
+        "Docker",
+        "Kubernetes",
+        "Ansible",
+        "Terraform"
+      ],
+      "candidates": 162,
+      "precision@10_before": 0.4,
+      "precision@10_after": 0.8,
+      "delta": 0.4
+    },
+    {
+      "keyword": "게임개발",
+      "expanded": [
+        "게임개발",
+        "게임프로그래머",
+        "게임엔진개발",
+        "레벨디자인",
+        "프로그래밍",
+        "Unity",
+        "UnrealEngine",
+        "C#",
+        "JavaScript",
+        "3D아트폴리싱"
+      ],
+      "candidates": 1065,
+      "precision@10_before": 0.1,
+      "precision@10_after": 0.7,
+      "delta": 0.6
+    },
+    {
+      "keyword": "UX디자인",
+      "expanded": [
+        "UX디자인",
+        "UX디자이너",
+        "사용자경험전문가",
+        "인터랙션디자이너",
+        "프로덕트디자이너",
+        "서비스디자이너",
+        "프로토타이핑전문가",
+        "사용자연구",
+        "디자인시스템개발"
+      ],
+      "candidates": 73,
+      "precision@10_before": 0.6,
+      "precision@10_after": 0.6,
+      "delta": 0.0
+    },
+    {
+      "keyword": "영상편집",
+      "expanded": [
+        "영상편집",
+        "영상편집전문가",
+        "비디오그래퍼",
+        "포스트프로덕션",
+        "AdobePremiere",
+        "FinalCutPro",
+        "DaVinciResolve",
+        "MotionGraphics",
+        "VisualEffects"
+      ],
+      "candidates": 369,
+      "precision@10_before": 0.9,
+      "precision@10_after": 1.0,
+      "delta": 0.1
+    },
+    {
+      "keyword": "품질관리",
+      "expanded": [
+        "품질관리",
+        "품질보증",
+        "QC엔지니어",
+        "품질분석",
+        "제조품질관리",
+        "SPC분석",
+        "통계품질관리",
+        "품질검사",
+        "ISO품질관리"
+      ],
+      "candidates": 5166,
+      "precision@10_before": 0.6,
+      "precision@10_after": 0.4,
+      "delta": -0.2
+    },
+    {
+      "keyword": "영업",
+      "expanded": [
+        "영업",
+        "영업대표",
+        "비즈니스개발",
+        "고객관계관리",
+        "리드생성",
+        "매출증대",
+        "솔루션제안",
+        "협상전문가"
+      ],
+      "candidates": 25214,
+      "precision@10_before": 1.0,
+      "precision@10_after": 1.0,
+      "delta": 0.0
+    }
+  ]
+}

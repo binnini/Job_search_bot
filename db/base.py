@@ -243,12 +243,15 @@ def ensure_tables():
         release_connection(conn)
 
 
-def batch_to_db(data_batch):
+def batch_to_db(data_batch, use_llm_tagging: bool = False):
     """크롤링된 배치 데이터를 직접 DB에 삽입.
-    data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, position, link] 리스트의 리스트."""
+    data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, position, link] 리스트의 리스트.
+    use_llm_tagging=True 이면 신규 삽입된 공고에 EXAONE 의미 태그를 추가로 부여한다.
+    """
     conn = connect_postgres()
     batch_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     quality_events = []
+    new_recruit_ids = []
 
     try:
         cursor = conn.cursor()
@@ -274,7 +277,7 @@ def batch_to_db(data_batch):
                 if exp_rule:
                     quality_events.append((batch_id, company, title, 'experience', exp_rule, career, str(parsed_experience)))
 
-                _jobkorea_write(
+                recruit_id = _jobkorea_write(
                     conn=conn,
                     cursor=cursor,
                     company_name=company,
@@ -288,6 +291,8 @@ def batch_to_db(data_batch):
                     tags=all_tags or None,
                     link=link,
                 )
+                if recruit_id:
+                    new_recruit_ids.append(recruit_id)
             except Exception as e:
                 conn.rollback()
                 logging.warning(f"배치 {i}번째 행 처리 실패: {e}")
@@ -301,6 +306,12 @@ def batch_to_db(data_batch):
             """, quality_events)
             conn.commit()
             logging.info(f"데이터 품질 이벤트 {len(quality_events)}건 기록 (batch_id={batch_id})")
+
+        # 신규 공고 LLM 태깅
+        if use_llm_tagging and new_recruit_ids:
+            from db.tagger import tag_recruit_batch
+            stats = tag_recruit_batch(new_recruit_ids)
+            logging.info(f"LLM 태깅 완료: 태깅됨={stats['tagged']} / 변화없음={stats['skipped']} / 실패={stats['failed']}")
 
     finally:
         release_connection(conn)
@@ -474,6 +485,8 @@ def _jobkorea_write(
                     ON CONFLICT DO NOTHING
                 """, (recruit_id, tag_id))
     else:
+        recruit_id = None
         logging.info(f"[SKIPPED - DUPLICATE] {company_name} / {announcement_name} / {deadline} 은 이미 존재하여 삽입되지 않았습니다.")
 
     conn.commit()
+    return recruit_id

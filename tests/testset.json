@@ -1,0 +1,702 @@
+[
+  {
+    "id": 1,
+    "recruit_id": 484245,
+    "company_name": "㈜디자인스튜디오",
+    "announcement_name": "디자인스튜디오 [현장관리-현장 AS (하자보수 - MH/본공사)] 채용",
+    "query": "서울 건축 현장 하자보수 경험형 정규직 연봉 협의"
+  },
+  {
+    "id": 2,
+    "recruit_id": 468813,
+    "company_name": "쿠팡풀필먼트서비스 유한회사",
+    "announcement_name": "[쿠팡]인천지역 물류센터 계약직 사원채용",
+    "query": "인천 물류센터 신입 상품 출고 계약직 일자리"
+  },
+  {
+    "id": 3,
+    "recruit_id": 491645,
+    "company_name": "브랜드틴",
+    "announcement_name": "브랜드틴과 함께할 에이전트를 찾습니다.",
+    "query": "경기 엔터테인먼트 신입 매니지먼트 에이전트 채용"
+  },
+  {
+    "id": 4,
+    "recruit_id": 498148,
+    "company_name": "훈장골 시흥 은계점",
+    "announcement_name": "신규오픈 갈비도락(구로), 훈장골(시흥은계) 서비스 매니저 구인합니다.",
+    "query": "서울 시흥 은계 한식당 서비스 매니저 정규직 연봉 3600만원"
+  },
+  {
+    "id": 5,
+    "recruit_id": 513646,
+    "company_name": "씨에이치케이컴퍼니",
+    "announcement_name": "주얼리 디자이너 (신입,경력) 모집",
+    "query": "서울 주얼리 디자이너 신입 금속가공 연봉 협의"
+  },
+  {
+    "id": 6,
+    "recruit_id": 529949,
+    "company_name": "㈜인피니티익스체인지코리아",
+    "announcement_name": "블록체인 사업 운영 담당",
+    "query": "서울 블록체인 콘텐츠 기획 신입 정규직 연봉 협의"
+  },
+  {
+    "id": 7,
+    "recruit_id": 514485,
+    "company_name": "아웃랜더(outlander)",
+    "announcement_name": "온라인 패션 플랫폼 운영 및 마케팅 담당자 채용",
+    "query": "서울 패션 마케팅 여성의류 경력 무관 연봉 2600만원 이상 정규직"
+  },
+  {
+    "id": 8,
+    "recruit_id": 475770,
+    "company_name": "송쌤 일본어",
+    "announcement_name": "[서울 영등포구] 일본어 강사 모집(기초 문법 수업)",
+    "query": "서울 영등포구 일본어 기초 문법 강사 계약직"
+  },
+  {
+    "id": 9,
+    "recruit_id": 538428,
+    "company_name": "㈜이니노스",
+    "announcement_name": "[이니노스] 웹 풀스택 개발자(2년이상) 정규직 모집",
+    "query": "서울 웹 풀스택 경력 2년 이상 개발자 정규직 정보보안 포함 연봉 협상"
+  },
+  {
+    "id": 10,
+    "recruit_id": 541223,
+    "company_name": "㈜엠제이플렉스",
+    "announcement_name": "[월239이상/신입가능] 연합뉴스TV 카메라보조/취재지원 채용",
+    "query": "서울 방송 카메라보조 신입 파견직 연봉 2800만원 이상"
+  },
+  {
+    "id": 11,
+    "recruit_id": 500868,
+    "company_name": "레귬(Legume)",
+    "announcement_name": "미쉐린 1스타 레스토랑 레귬(LEGUME) 요리사 구인",
+    "query": "서울 서울 고급 레스토랑 신입 요리사 연봉 3천만원 이상"
+  },
+  {
+    "id": 12,
+    "recruit_id": 521648,
+    "company_name": "HANKUK Construction",
+    "announcement_name": "[인도][건설] 한국건설 경력직 구합니다 [건축ㆍ건설ㆍ토목]",
+    "query": "한국 건설 경력직 해외 현장 소장 견적 연봉 9억 이상"
+  },
+  {
+    "id": 13,
+    "recruit_id": 523312,
+    "company_name": "제이액터스 엔터테인먼트",
+    "announcement_name": "[JACTORS] 시니어 모델 매니지먼트 직원 채용(대리 또는 과장급)",
+    "query": "서울 제이액터스 엔터테인먼트 시니어 모델 매니지먼트 직원 구인"
+  },
+  {
+    "id": 14,
+    "recruit_id": 502896,
+    "company_name": "㈜엠제이플렉스",
+    "announcement_name": "[판교/복지우수/자체직 전환가능성 有] 대기업계열사 임원비서 채용",
+    "query": "판교 임원 비서 파견직 복지 좋고 연봉 3500만원 이상"
+  },
+  {
+    "id": 15,
+    "recruit_id": 538643,
+    "company_name": "에이블코리아㈜",
+    "announcement_name": "[ 단순CS 정규직채용 ] 구로디지털단지역 / 주5일 / 10시출근 / 인센지급",
+    "query": "구로디지털단지 콜센터 신입 연봉 3천만원대 단순CS 지원"
+  },
+  {
+    "id": 16,
+    "recruit_id": 537426,
+    "company_name": "㈜트랜딩글로벌",
+    "announcement_name": "온라인 전체적으로 운영할 인재를 모십니다",
+    "query": "경기 지역 계약직 판매 및 데이터 분석 신입 일자리 찾기"
+  },
+  {
+    "id": 17,
+    "recruit_id": 541264,
+    "company_name": "㈜참신에너지",
+    "announcement_name": "태양광 텔레마케팅 사원 모집합니다",
+    "query": "경기 지역 신입 텔레마케팅 에너지 계약직 일자리 찾기"
+  },
+  {
+    "id": 18,
+    "recruit_id": 533535,
+    "company_name": "타임즈 어학원",
+    "announcement_name": "학원 행정 (출석체크, 교통지도, 교재관리, 전화응대 등)",
+    "query": "충남 지역 어학원 조교 계약직 채용"
+  },
+  {
+    "id": 19,
+    "recruit_id": 530134,
+    "company_name": "유아영어 방문수업 맘잉",
+    "announcement_name": "[워라밸최고]유아영어 맘잉에서 하남지역 선생님을 모십니다.",
+    "query": "하남 지역 유아 영어 방문 교사 프리랜서 일자리 찾기"
+  },
+  {
+    "id": 20,
+    "recruit_id": 499349,
+    "company_name": "노무법인 건승(공무원재해전문센터)",
+    "announcement_name": "[노무법인 건승 공무원재해전문센터] 법률사무원(영업) 채용공고",
+    "query": "서울 공무원 재해 전문 센터 신입 법률 사무 직원 연봉 3200만원"
+  },
+  {
+    "id": 21,
+    "recruit_id": 475547,
+    "company_name": "육거리대농마트",
+    "announcement_name": "육거리대농마트에서 야채 손질/담당 하실 분 모십니다",
+    "query": "충북 지역 야채 손질 정규직 채용 정보 찾고 있어요!"
+  },
+  {
+    "id": 22,
+    "recruit_id": 538004,
+    "company_name": "테즈에프앤비",
+    "announcement_name": "번스앤칙스 직영점 정규직 팀원 모집 (주5일제)",
+    "query": "서울 패스트푸드 직영점 신입 팀원 연봉 3200만원"
+  },
+  {
+    "id": 23,
+    "recruit_id": 508593,
+    "company_name": "㈜해태산업(ladomus)",
+    "announcement_name": "라도무스 연회부 사원채용",
+    "query": "대전 웨딩 예식장 신입 정규직 채용"
+  },
+  {
+    "id": 24,
+    "recruit_id": 471697,
+    "company_name": "우드플랜",
+    "announcement_name": "가구제작담당자 모집합니다",
+    "query": "대전 가구제작 신입 정규직 연봉 협의"
+  },
+  {
+    "id": 25,
+    "recruit_id": 536005,
+    "company_name": "㈜케이티씨에스",
+    "announcement_name": "[계약직/둔산동] 상생페이백콜센터 관리자 (팀장/강사/지원스텝) 채용",
+    "query": "대전 콜센터 팀장 계약직 연봉 협의 경력무관"
+  },
+  {
+    "id": 26,
+    "recruit_id": 492518,
+    "company_name": "메이튼",
+    "announcement_name": "[자동차용품 1위 스타트업 메이튼] 피플팀 리드(HRBP) 채용",
+    "query": "인천 기반 자동차용품 스타트업 인사 총괄 리드 채용"
+  },
+  {
+    "id": 27,
+    "recruit_id": 486068,
+    "company_name": "(유)디에스테크",
+    "announcement_name": "(유)디에스테크 사무기기 관리 및 서비스 채용",
+    "query": "전북 신입 사무기기 유지보수 정규직 연봉 2880만원"
+  },
+  {
+    "id": 28,
+    "recruit_id": 495815,
+    "company_name": "주식회사 엠피씨플러스",
+    "announcement_name": "[경력무관/입사후교육] 메가스터디교육 CS 주/야간 고객만족팀 채용",
+    "query": "서울 메가스터디 교육 고객만족팀 계약직 신입 연봉 협의"
+  },
+  {
+    "id": 29,
+    "recruit_id": 472781,
+    "company_name": "㈜온누리커뮤니케이션",
+    "announcement_name": "[미국1위 육아용품 브랜드 란시노&신규 기초 화장품 브랜드] 컨텐츠 마케터",
+    "query": "서울 육아용품 화장품 온라인 마케팅 경력직 구인"
+  },
+  {
+    "id": 30,
+    "recruit_id": 503990,
+    "company_name": "코비코",
+    "announcement_name": "영업팀 상시채용 (인재 Pool 등록)",
+    "query": "광주 신입 영업 신입사원 고객관리 경험 채용"
+  },
+  {
+    "id": 31,
+    "recruit_id": 516711,
+    "company_name": "㈜나눔인베스트",
+    "announcement_name": "[부천] 주식 유튜브 촬영전문가 채용(주식 DB 수집, 재택근무가능) 영업X",
+    "query": "부천 근처 재택근무 주식 유튜브 콘텐츠 전문가 채용"
+  },
+  {
+    "id": 32,
+    "recruit_id": 473149,
+    "company_name": "제이제이로지스틱스㈜",
+    "announcement_name": "JJLOGISTICS 이천 설성 물류 센터 물류 사원(주임) 채용",
+    "query": "경기권 물류 센터 계약직 물류 관리 경험이 있는 채용"
+  },
+  {
+    "id": 33,
+    "recruit_id": 470184,
+    "company_name": "(유)세코더그레이드",
+    "announcement_name": "창원컨벤션센터 세코더그레이드 뷔페,연회센터 조리부 채용",
+    "query": "창원 뷔페 조리 정규직 채용 후기"
+  },
+  {
+    "id": 34,
+    "recruit_id": 507730,
+    "company_name": "아이에프에이 주식회사",
+    "announcement_name": "[iFA] 보험대리점 강남사업부(부산지역) 신규지사 보험총무 모집(영업직X)",
+    "query": "부산 지역 생명보험 및 화재보험 경력 총무 정규직 채용 연봉 3600만원"
+  },
+  {
+    "id": 35,
+    "recruit_id": 469159,
+    "company_name": "인베스트리에셋",
+    "announcement_name": "[신중동/주식TM1차퍼미션]/화이트영업/유투업계1위/코인/해선/",
+    "query": "경기 지역 펀드매니저 계약직 텔레마케팅 경험 신입 채용"
+  },
+  {
+    "id": 36,
+    "recruit_id": 525536,
+    "company_name": "오아시스마켓",
+    "announcement_name": "[오아시스마켓]의왕 물류센터/취업보너스200/현장직 모집",
+    "query": "의왕 물류센터 신입 물류직 취업 보너스 200"
+  },
+  {
+    "id": 37,
+    "recruit_id": 489541,
+    "company_name": "스시아지 잠실점㈜",
+    "announcement_name": "[롯데백화점 잠실內] 프리미엄스시전문점 스시아지 잠실점 홀 사원 모집",
+    "query": "잠실 백화점 일식 카운터 서빙 신입 정규직 연봉 3600만원"
+  },
+  {
+    "id": 38,
+    "recruit_id": 522609,
+    "company_name": "㈜아이피시",
+    "announcement_name": "[신라호텔자회사/SHP] 세종시 사내 피트니스 보조트레이너(AT)",
+    "query": "세종 사내 피트니스 계약직 트레이너 채용"
+  },
+  {
+    "id": 39,
+    "recruit_id": 480395,
+    "company_name": "현대스틸산업㈜",
+    "announcement_name": "경력사원 상시 지원 - 강교설치",
+    "query": "경험있는 엔지니어, 현대스틸에서 강교 설치 프로젝트 경력 채용"
+  },
+  {
+    "id": 40,
+    "recruit_id": 498809,
+    "company_name": "LX판토스",
+    "announcement_name": "경력직 상시채용 (인재Pool) - 포워딩",
+    "query": "LX판토스 혁신 포워딩 경력 상관없이 연봉 협의 가능한 기회 찾기"
+  },
+  {
+    "id": 41,
+    "recruit_id": 525393,
+    "company_name": "스테이웨딩앤호텔",
+    "announcement_name": "군산스테이웨딩앤호텔에서 연회부 팀장님을 모집합니다.",
+    "query": "군산 지역 연회 및 이벤트 관리 팀장 정규직 구인"
+  },
+  {
+    "id": 42,
+    "recruit_id": 511389,
+    "company_name": "㈜도솔메디",
+    "announcement_name": "도솔메디 브랜딩&마케팅팀 디자이너 모집합니다",
+    "query": "경기권 신입 브랜딩 마케팅 디자이너 온라인 광고 경험 채용"
+  },
+  {
+    "id": 43,
+    "recruit_id": 497424,
+    "company_name": "㈜뉴센세이션",
+    "announcement_name": "NS엔터테인먼트 배우/모델/가수/인플루언서 로드매니저 채용",
+    "query": "경기 지역 엔터테인먼트 신입 로드매니저 정규직 채용"
+  },
+  {
+    "id": 44,
+    "recruit_id": 528179,
+    "company_name": "유스업파트너스㈜",
+    "announcement_name": "[유스업파트너스] 2025년 신입ㆍ경력 채용",
+    "query": "서울 기반 전략 및 재무 분석 신입 정규직 연봉 3000만원"
+  },
+  {
+    "id": 45,
+    "recruit_id": 523827,
+    "company_name": "의료법인 한양의료재단",
+    "announcement_name": "남양주한양병원 총무구매팀 직원 모집(신입 / 경력)",
+    "query": "경기 지역 신입 총무구매 담당자 자산 관리 경력 우대"
+  },
+  {
+    "id": 46,
+    "recruit_id": 517505,
+    "company_name": "해밀톤관광호텔㈜",
+    "announcement_name": "해밀톤호텔 레스토랑(HAmeal) 조리사 정규직 채용",
+    "query": "서울 호텔 한식 조리 신입 연봉 협의"
+  },
+  {
+    "id": 47,
+    "recruit_id": 470258,
+    "company_name": "㈜마루에이치알",
+    "announcement_name": "[을지로입구역 도보 4분] 프로그램 서버 관리 및 기술지원 채용",
+    "query": "을지로 근처 신입 서버 관리 파견직 연봉 3000만원 이상"
+  },
+  {
+    "id": 48,
+    "recruit_id": 488552,
+    "company_name": "비교대장",
+    "announcement_name": "전국 장기렌트,리스 영업사원분께 코드공유 모든수수료 100프로 지급",
+    "query": "대전 렌탈 영업 프리랜서 경험이 있으면 코드 공유로 수수료 100% 받을 수 있는 기회 찾기"
+  },
+  {
+    "id": 49,
+    "recruit_id": 525375,
+    "company_name": "㈜빅링커",
+    "announcement_name": "영상 기획 및 편집/ 온라인 마케터",
+    "query": "서울 프리랜서 영상 마케팅 프리랜서 기회"
+  },
+  {
+    "id": 50,
+    "recruit_id": 491760,
+    "company_name": "㈜대교 창원차이홍",
+    "announcement_name": "창원 상남동 일본어 교사모집",
+    "query": "창원 상남동 일본어 학원 프리랜서 교사 구인"
+  },
+  {
+    "id": 51,
+    "recruit_id": 476427,
+    "company_name": "㈜정신건강연구소",
+    "announcement_name": "[임상병리사 채용] 수면검사, 예약관리 및 응대, 행정업무 등 관리자",
+    "query": "서울 임상병리사 신입 정신건강 수면검사 관리자 연봉 3000만원"
+  },
+  {
+    "id": 52,
+    "recruit_id": 479033,
+    "company_name": "㈜다우닝",
+    "announcement_name": "다우닝 CS파트 고객응대 담당 사원 정규직 채용",
+    "query": "경기 지역 가구 고객 응대 정규직 연봉 협의"
+  },
+  {
+    "id": 53,
+    "recruit_id": 502293,
+    "company_name": "좋은일자리",
+    "announcement_name": "마곡지구빌딩 시설관리 전기기사 전기산업기사 소방관리 기계설비유지채용",
+    "query": "서울 마곡 계약직 시설관리 신입 연봉 3600만원 경력무관"
+  },
+  {
+    "id": 54,
+    "recruit_id": 530159,
+    "company_name": "㈜다누리",
+    "announcement_name": "[스케줄DB제공] 세금환급 영업 `겉멋 뺀 진짜 영업조직`",
+    "query": "서울 세금환급 영업 신입 정규직"
+  },
+  {
+    "id": 55,
+    "recruit_id": 523695,
+    "company_name": "광영디앤엠",
+    "announcement_name": "[분양상담사 특채] 연봉 실화냐",
+    "query": "서울 분양 상담 신입 연봉 협의 조건"
+  },
+  {
+    "id": 56,
+    "recruit_id": 503403,
+    "company_name": "쿤텍㈜",
+    "announcement_name": "네트워크/OT 보안 엔지니어 채용 공고의 건",
+    "query": "경기권 신입 정보보안 네트워크 엔지니어 정규직 연봉 협의"
+  },
+  {
+    "id": 57,
+    "recruit_id": 478310,
+    "company_name": "보이",
+    "announcement_name": "솔루션개발 WMS, FMS, IMS, ECS 개발 (C# WPF, OPCUA, DBMS)",
+    "query": "경기 지역 신입 C# WPF 솔루션 개발자 연봉 2600만원"
+  },
+  {
+    "id": 58,
+    "recruit_id": 522076,
+    "company_name": "㈜어센드미디어",
+    "announcement_name": "[광고대행사] 콘텐츠팀 경력자 채용",
+    "query": "서울 광고대행사 콘텐츠 경력 3년 이상 정규직"
+  },
+  {
+    "id": 59,
+    "recruit_id": 536867,
+    "company_name": "㈜비오엠아이",
+    "announcement_name": "사업기획 팀장 채용 공고",
+    "query": "서울 서울사업기획 팀장 문서관리 경력무관 연봉 협의"
+  },
+  {
+    "id": 60,
+    "recruit_id": 499463,
+    "company_name": "스와치그룹코리아㈜",
+    "announcement_name": "[론진 Longines] 현대백화점 대구점 주니어 세일즈 정규직 채용",
+    "query": "대구 현대백화점 주니어 세일즈 재고관리 경력 없어도 지원 가능한 채용"
+  },
+  {
+    "id": 61,
+    "recruit_id": 540624,
+    "company_name": "인터프로셀㈜",
+    "announcement_name": "(영등포구청/주5일) 자금관리솔루션 마케팅 및 협력채널 관리 업무 모집",
+    "query": "서울 인터프로셀 자금 마케팅 계약직 신입 연봉 3000만원 이상"
+  },
+  {
+    "id": 62,
+    "recruit_id": 496558,
+    "company_name": "미주강화㈜",
+    "announcement_name": "조경시설물 분야 : 현장관리자 채용 (대구지역 근무, 고급 이상)",
+    "query": "대구 조경 현장관리자 고급 경력 채용 연봉 협의"
+  },
+  {
+    "id": 63,
+    "recruit_id": 491440,
+    "company_name": "㈜한국전기시스템",
+    "announcement_name": "전기안전관리대행 소사장 및 직원 모집",
+    "query": "서울 전기점검 전문가 정규직 연봉 3000만원"
+  },
+  {
+    "id": 64,
+    "recruit_id": 539737,
+    "company_name": "㈜케이엠제이컴퍼니(사우스반데코호텔)",
+    "announcement_name": "사우스반데코호텔 프론트데스크 채용",
+    "query": "부산 호텔 신입 프론트 데스크 정규직 연봉 3180만원"
+  },
+  {
+    "id": 65,
+    "recruit_id": 543050,
+    "company_name": "제이제이워크",
+    "announcement_name": "[상여500] 주간 2교대/3교대 생산OP검사 모집",
+    "query": "경기 지역 주간 2교대 생산 검사 계약직 신입 연봉 협의"
+  },
+  {
+    "id": 66,
+    "recruit_id": 493809,
+    "company_name": "㈜힐링바이오",
+    "announcement_name": "[㈜힐링바이오] 업무지원 모집",
+    "query": "서울 신입 행정/자산 관리 경력 무관 연봉 2800만원"
+  },
+  {
+    "id": 67,
+    "recruit_id": 494012,
+    "company_name": "22경찰경호대 복지회",
+    "announcement_name": "구내식당 조리원 모집",
+    "query": "서울 구내식당 신입 계약직 조리사 자리"
+  },
+  {
+    "id": 68,
+    "recruit_id": 522724,
+    "company_name": "㈜하우쓰리",
+    "announcement_name": "2D 애팩 애니메이터",
+    "query": "서울 2D 애니메이션 애니메이터 경력 상관없이 연봉 2800만원 정규직"
+  },
+  {
+    "id": 69,
+    "recruit_id": 467261,
+    "company_name": "주식회사제이윈푸드",
+    "announcement_name": "도가원족발 이마트 수도권 북동부권 슈퍼바이저 모집",
+    "query": "경기 지역 족발 판매 계약직 신입 슈퍼바이저 연봉 4500만원 이상"
+  },
+  {
+    "id": 70,
+    "recruit_id": 496600,
+    "company_name": "㈜제이디큐브릭",
+    "announcement_name": "[㈜제이디큐브릭] 경력직 채용(3D디자이너, 전시기획, 전시설계&공무, VMD 설계&공무)",
+    "query": "서울 3D 전시 디자인 경력 정규직 연봉 협의"
+  },
+  {
+    "id": 71,
+    "recruit_id": 478198,
+    "company_name": "㈜겐트 (GENT)",
+    "announcement_name": "신규 여성 의류 쇼핑몰 피팅 모델 구인(프리랜서, 주간 촬영)",
+    "query": "서울 여성 의류 피팅 모델 아르바이트 주간 근무"
+  },
+  {
+    "id": 72,
+    "recruit_id": 523731,
+    "company_name": "오뚜기제유㈜",
+    "announcement_name": "오뚜기제유(주) 생산직 팀원 채용",
+    "query": "충북 지역 오뚜기 신입 생산직 정규직 일자리"
+  },
+  {
+    "id": 73,
+    "recruit_id": 501483,
+    "company_name": "㈜에스앤디",
+    "announcement_name": "(주)에스앤디 생산팀 신입 및 경력 사원 모집",
+    "query": "충북 지역 생산팀 신입 정규직 연봉 협의"
+  },
+  {
+    "id": 74,
+    "recruit_id": 526610,
+    "company_name": "코스마트로지스틱스코리아㈜",
+    "announcement_name": "[코스마트] 해상수출입 오퍼레이션 직원 모집",
+    "query": "서울 해상 수출입 신입 오퍼레이션 정규직 일자리"
+  },
+  {
+    "id": 75,
+    "recruit_id": 542621,
+    "company_name": "든든덮밥&곱도리",
+    "announcement_name": "든든덮밥&곱도리 주4일 5일 6일 정직원 or 파트타이머 구인 합니다",
+    "query": "서울 서울업체 신입 주4일 파트타임 연봉 4200만원"
+  },
+  {
+    "id": 76,
+    "recruit_id": 526580,
+    "company_name": "㈜제노센스",
+    "announcement_name": "[대전] 윈도우기반 응용 S/W 개발자 모집",
+    "query": "대전 기반 윈도우 소프트웨어 개발자 3년 이상 경력 정규직 연봉 5000만원"
+  },
+  {
+    "id": 77,
+    "recruit_id": 488900,
+    "company_name": "㈜쿠즈코퍼레이션",
+    "announcement_name": "[확장이전] 경영지원 매니저 (세무/회계/경리) 경력",
+    "query": "서울 경영지원 세무 경력 매니저 정규직 연봉 협의"
+  },
+  {
+    "id": 78,
+    "recruit_id": 469501,
+    "company_name": "㈜복마마에프앤비",
+    "announcement_name": "복이당 베이커리카페 바리스타 채용",
+    "query": "서울 시내 경력 무관 바리스타 정규직 연봉 3000만원"
+  },
+  {
+    "id": 79,
+    "recruit_id": 536879,
+    "company_name": "로데슈바르즈코리아㈜",
+    "announcement_name": "[로데슈바르즈코리아] 영업지원 경력직",
+    "query": "서울 서울 오피스 지원 경력직 로데슈바르즈 연봉 협의"
+  },
+  {
+    "id": 80,
+    "recruit_id": 466375,
+    "company_name": "목계화원㈜",
+    "announcement_name": "[목계화원] 신용산역 3분거리 / 주방,홀 직원 모집합니다",
+    "query": "신용산역 근처 신입 주방/홀 직원 정규직 4200만원 연봉"
+  },
+  {
+    "id": 81,
+    "recruit_id": 493936,
+    "company_name": "주식회사 드림에이지",
+    "announcement_name": "[DRIMAGE-K스튜디오] 캐릭터 모델링",
+    "query": "서울 캐릭터 모델링 경력 5년 이상 정규직 드림에이지"
+  },
+  {
+    "id": 82,
+    "recruit_id": 528174,
+    "company_name": "㈜하이브",
+    "announcement_name": "[HYBE Media Studio] 미디어 프로덕트 사업 기획·유통 Jr.(계약직)",
+    "query": "하이브 미디어 프로젝트 계약직 서울 경력 1년 이상"
+  },
+  {
+    "id": 83,
+    "recruit_id": 538567,
+    "company_name": "전수현웨딩",
+    "announcement_name": "[전수현웨딩] 웨딩스튜디오 포토샵, 디자이너 모집",
+    "query": "전북 지역 웨딩 스튜디오 디자이너 정규직 연봉 3000만원 이상"
+  },
+  {
+    "id": 84,
+    "recruit_id": 494957,
+    "company_name": "㈜루다컴퍼니",
+    "announcement_name": "(주)루다컴퍼니 물류관리 신입/경력 채용",
+    "query": "인천 물류 계약직 신입 일자리 찾기"
+  },
+  {
+    "id": 85,
+    "recruit_id": 541989,
+    "company_name": "㈜로디클",
+    "announcement_name": "서울도보여행 코스개발 기획자 모집",
+    "query": "경기 지역 도보여행 콘텐츠 기획자 정규직 채용"
+  },
+  {
+    "id": 86,
+    "recruit_id": 525366,
+    "company_name": "㈜넥슨",
+    "announcement_name": "[메이플스토리 PC] 웹 백엔드 개발자",
+    "query": "경기 넥슨 메이플스토리 웹 백엔드 경력 개발자 채용"
+  },
+  {
+    "id": 87,
+    "recruit_id": 505446,
+    "company_name": "월드베브릿지 한국외대점",
+    "announcement_name": "[건강한 브런치 카페, 베브릿지] 베브릿지 본점 주5일 미들매니저 모집",
+    "query": "서울 미들 매니저 계약직 건강한 브런치 카페 연봉 2760만원"
+  },
+  {
+    "id": 88,
+    "recruit_id": 541785,
+    "company_name": "(주)가온그룹컴퍼니",
+    "announcement_name": "[행복한사무실] 기사상담 담당자 채용",
+    "query": "경기 지역 신입 기사 상담 정규직 3000만원 연봉 채용"
+  },
+  {
+    "id": 89,
+    "recruit_id": 512676,
+    "company_name": "주식회사 에이원테크",
+    "announcement_name": "[아웃소싱] 하반기 사무직원 정규직 모집(경력무관)",
+    "query": "경기권 신입 사무직원 정규직 연봉 2760만원 채용"
+  },
+  {
+    "id": 90,
+    "recruit_id": 507824,
+    "company_name": "인터프로셀㈜",
+    "announcement_name": "[주5일/유명 프렌차이즈] 가맹사업지원팀 가맹점 관리직 채용",
+    "query": "서울 유명 프랜차이즈 가맹점 관리 계약직 연봉 2880만원"
+  },
+  {
+    "id": 91,
+    "recruit_id": 495953,
+    "company_name": "㈜삼구아이앤씨",
+    "announcement_name": "[파주] 주 5일 야간 근무 / 세탁물 분류 및 타월 포장 신규 인력 모집",
+    "query": "파주 야간 세탁물 분류 계약직 연봉 4천만원 이상"
+  },
+  {
+    "id": 92,
+    "recruit_id": 467644,
+    "company_name": "㈜랜드플러스투어",
+    "announcement_name": "[여행사/웹디자인](경력우대) 여행사 홈페이지 디자인 구축&관리",
+    "query": "서울 여행사 웹디자이너 경력 우대 정규직"
+  },
+  {
+    "id": 93,
+    "recruit_id": 530879,
+    "company_name": "㈜엠에이치앤티(MH&T)",
+    "announcement_name": "(React) 프론트엔트 웹 개발자 채용 (경력)",
+    "query": "서울 경력 React 프론트엔드 개발자 정규직 연봉 협의"
+  },
+  {
+    "id": 94,
+    "recruit_id": 511956,
+    "company_name": "㈜넉넉",
+    "announcement_name": "신선식품 유통기업 ㈜넉넉 온라인몰 MD·CSR 채용",
+    "query": "경북 신선식품 온라인 MD 정규직 연봉 2500만원 이상"
+  },
+  {
+    "id": 95,
+    "recruit_id": 515008,
+    "company_name": "윈애드컴퍼니",
+    "announcement_name": "수원/주 4일근무/하루 5시간 근무하는 MZ회사 신입사원 대규모 모집중",
+    "query": "수원 MZ세대 주 4일 근무 신입 연봉 4800만원"
+  },
+  {
+    "id": 96,
+    "recruit_id": 512213,
+    "company_name": "플레이블링크",
+    "announcement_name": "숏폼 커머스 플랫폼 `풀스택 백엔드 개발자` 채용",
+    "query": "경기권 풀스택 백엔드 경력 개발자 7200만원 이상 채용"
+  },
+  {
+    "id": 97,
+    "recruit_id": 518578,
+    "company_name": "㈜에이치에프프랜차이즈",
+    "announcement_name": "[찬미찬 광적본점] 배송 및 포장 사원 모집",
+    "query": "경기 지역 계약직 배송 사원 신입 연봉 3700만원 이상 채용"
+  },
+  {
+    "id": 98,
+    "recruit_id": 519617,
+    "company_name": "㈜더파운더즈",
+    "announcement_name": "[SCM] 일본 물류/CS 아르바이트",
+    "query": "서울 일본 물류 아르바이트 신입 기회 찾기"
+  },
+  {
+    "id": 99,
+    "recruit_id": 508191,
+    "company_name": "씨케이코퍼레이션즈㈜",
+    "announcement_name": "[커피업계30년] 커피루소정동점 신입 바리스타 채용",
+    "query": "서울 신입 바리스타 계약직 커피 전문점 경험"
+  },
+  {
+    "id": 100,
+    "recruit_id": 495530,
+    "company_name": "고설우 삼성점",
+    "announcement_name": "한우 전문점 고설우에서 주방 과장 / 대리 모십니다.",
+    "query": "서울 한우 전문점 주방 신입 과장 연봉 3800만원 이상"
+  }
+]

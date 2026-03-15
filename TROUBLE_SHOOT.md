@@ -740,6 +740,168 @@ result_lines = [format_recruit(i, r, include_education=True) for i, r in enumera
 
 ---
 
+## 18. Discord 봇 검색 응답이 '잠시 기다려 주세요'에서 멈추는 문제
+
+### Problem
+
+Discord 봇이 정상 실행 중임에도 불구하고 검색 명령을 입력하면
+'잠시 기다려 주세요' 메시지 이후 응답이 오지 않는 현상이 발생했습니다.
+
+로그를 확인하니 다음 에러가 반복되었습니다.
+
+```
+psycopg2.OperationalError: SSL connection has been closed unexpectedly
+```
+
+SQLAlchemy Connection Pool이 유지하는 idle 연결이 PostgreSQL 서버 쪽에서
+타임아웃으로 끊겼는데, Pool은 이를 모르고 끊어진 연결을 재사용하다 실패하는 구조였습니다.
+
+### Solution
+
+`create_engine`에 `pool_pre_ping=True` 옵션을 추가했습니다.
+
+```python
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+```
+
+`pool_pre_ping=True`는 Pool에서 연결을 꺼낼 때 `SELECT 1`로 연결 상태를 먼저 확인합니다.
+끊어진 연결이 감지되면 자동으로 재연결 후 반환하여 `OperationalError`를 방지합니다.
+
+---
+
+## 19. 기존 CSV 적재 시 마감일이 2026년으로 밀리는 문제
+
+### Problem
+
+2025년 수집된 CSV 파일을 2026년에 DB에 적재하면,
+`~07/20` 같은 마감일이 `parse_deadline()` 내부에서 오늘 날짜(2026-03-15) 기준으로 파싱되어
+모두 2026~2027년으로 설정되는 문제가 있었습니다.
+
+```python
+# parse_deadline 내부 — today를 기준으로 연도 결정
+year = today.year  # 2026
+deadline = datetime(year, month, day).date()
+if deadline < today:  # 이미 지났으면 내년으로 보정
+    deadline = datetime(year + 1, month, day).date()  # 2027년!
+```
+
+`jobkorea_data_2025-07-15.csv`에 담긴 마감일 `~07/20`은
+실제로는 2025-07-20이지만 2026-07-20으로 적재되어 데이터가 왜곡되었습니다.
+
+### Solution
+
+`csv_to_db()`에 `today` 파라미터를 추가하고,
+파일명(`jobkorea_data_2025-07-15.csv`)에서 날짜를 정규식으로 추출하여 기준 날짜로 사용했습니다.
+
+```python
+def csv_to_db(csv_path, today=None):
+    if today is None:
+        m = re.search(r'(\d{4})-(\d{2})-(\d{2})', csv_path)
+        if m:
+            today = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    ...
+    deadline=JobPreprocessor.parse_deadline(row['마감일'], today=today)
+```
+
+파일명에 날짜가 없는 경우(`jobkorea_data.csv`)는 현재 날짜로 fallback됩니다.
+
+---
+
+## 20. Ollama 원격 접속 불가 — localhost 바인딩 문제
+
+### Problem
+
+동일 로컬 네트워크 내 Mac에서 Ollama를 실행하고
+다른 서버(192.168.219.155)에서 `http://192.168.219.114:11434`로 접속 시
+`Connection refused` 오류가 발생했습니다.
+
+### Solution
+
+Ollama는 기본적으로 `127.0.0.1`(localhost)에만 바인딩되어 같은 기기에서만 접속 가능합니다.
+같은 LAN의 다른 기기도 Mac 입장에서는 외부 접속이므로, `0.0.0.0` 바인딩이 필요합니다.
+
+```bash
+OLLAMA_HOST=0.0.0.0 ollama serve
+```
+
+`0.0.0.0`으로 바인딩하면 인터넷이 아닌 LAN 내 모든 기기에서 접속 가능합니다.
+
+---
+
+## 21. LLM 태깅 출력 형식 불일치 — 긴 구 형태 태그
+
+### Problem
+
+EXAONE을 이용한 공고 태깅 시, 기존 DB의 단어형 태그(`백엔드`, `Java`, `SNS마케팅`)와 달리
+LLM이 구 형태의 긴 태그를 생성하는 문제가 발생했습니다.
+
+```
+기존 태그: 소프트웨어개발, C++, Linux
+LLM 생성:  자동차 전장 소프트웨어 개발, Linux 기반 시스템, C++ 전문가
+```
+
+공백이 포함된 태그는 `tag.name ILIKE '%token%'` 검색에서 부분 매칭이 불안정하고,
+기존 태그와 형식이 달라 검색 노이즈가 증가합니다.
+
+또한 기업명, 지역, 연봉 같은 메타 정보가 태그에 포함되는 케이스도 있었습니다.
+
+```
+gemma3 생성: 방산, 품질관리, ISO, 신입, 듀라텍  ← 기업명 포함
+```
+
+### Solution
+
+프롬프트에 명확한 형식 규칙과 나쁜 예시를 추가했습니다.
+
+```
+규칙:
+- 공백 없는 단어만 (예: 백엔드, Java, 데이터분석, UI디자인)
+- 직무/기술/산업 도메인만 포함 (지역·연봉·고용형태·기업명 제외)
+- 5~8개, 쉼표 구분, 태그만 출력
+
+예시 출력: 백엔드, Java, Spring, REST API, MySQL, 서버개발
+```
+
+출력 파싱 시에도 첫 줄만 사용하고, 공백이 2개 이상 포함된 태그를 필터링하여 방어적으로 처리합니다.
+
+```python
+tags = [t for t in tags if 1 <= len(t) <= 20 and t.count(" ") <= 1]
+```
+
+---
+
+## 22. LLM 구독 키워드 과확장 — Recall 증가와 Precision 저하
+
+### Problem
+
+방안 1(구독 키워드 확장) 구현 시 EXAONE이 원래 직무와 관련 없는 상위 개념 키워드까지 포함하여
+매칭 공고가 폭발적으로 증가하는 과확장 문제가 발생했습니다.
+
+```
+ML엔지니어 → 머신러닝, AI, 데이터분석, 소프트웨어개발  ← 너무 넓음
+서비스기획  → Before 1,291건 → After 10,691건  ← 9,400건 과확장
+```
+
+첫 번째 프롬프트가 "관련된 키워드"를 요청했기 때문에
+LLM이 같은 직무의 동의어가 아니라 연관 직무 전체를 포함했습니다.
+
+### Solution
+
+프롬프트를 "동의어·기술 스택만 추가, 상위 개념 금지"로 강화하고 나쁜 예시를 추가했습니다.
+
+```
+규칙: 같은 직무를 다르게 표현한 동의어·기술 스택만 추가해줘.
+      상위 개념이나 관련 직무는 포함하지 마.
+
+나쁜 예 (너무 넓음): ML엔지니어, 데이터분석, AI, 소프트웨어개발
+좋은 예: ML엔지니어, MLOps, 머신러닝엔지니어, 딥러닝, PyTorch, TensorFlow
+```
+
+개선 결과: 전체 매칭 증가율 **86% → 30%** 로 과확장이 억제되었으며,
+방안 2(재순위)와 함께 사용하여 Recall 증가 + Precision 보완 구조로 운영합니다.
+
+---
+
 ## 17. 소스 파일이 gitignored 디렉토리에 위치하는 문제
 
 ### Problem

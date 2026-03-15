@@ -83,9 +83,13 @@ async def notify_subscribers(client, skip_dedup: bool = False):
     for sub in subscriptions:
         user_keywords[sub.discord_user_id].append(sub.keyword)
 
-    # 키워드 확장 (중복 제거 후 1회만 호출)
+    # 키워드 확장 (중복 제거 후 1회만 호출) — 스레드 풀에서 실행해 이벤트 루프 블로킹 방지
+    import asyncio
+    loop = asyncio.get_event_loop()
     all_keywords = list({kw for kws in user_keywords.values() for kw in kws if kw})
-    expanded_map = {kw: expand_keyword(kw) for kw in all_keywords}
+    expanded_map = {}
+    for kw in all_keywords:
+        expanded_map[kw] = await loop.run_in_executor(None, expand_keyword, kw)
     logging.info(f"키워드 확장 완료: {len(expanded_map)}개")
 
     for discord_user_id, keywords in user_keywords.items():
@@ -112,14 +116,10 @@ async def notify_subscribers(client, skip_dedup: bool = False):
                 logging.info(f"user={discord_user_id}: 매칭 {len(matched)}건 모두 이미 발송됨, 생략")
                 continue
 
-        # 방안 2: 발송 전 키워드별 관련도 재순위
-        if len(keywords) == 1:
+        # 방안 2: 발송 전 키워드별 관련도 재순위 — 스레드 풀에서 실행
+        if keywords:
             from discord_bot.reranker import rerank
-            to_notify = rerank(keywords[0], to_notify)
-        elif len(keywords) > 1:
-            from discord_bot.reranker import rerank
-            # 다중 키워드: 가장 구독자가 많이 쓴 첫 번째 키워드 기준으로 재순위
-            to_notify = rerank(keywords[0], to_notify)
+            to_notify = await loop.run_in_executor(None, rerank, keywords[0], to_notify)
 
         try:
             user = await client.fetch_user(int(discord_user_id))

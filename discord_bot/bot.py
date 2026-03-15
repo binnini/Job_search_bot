@@ -166,7 +166,9 @@ async def on_message(message):
     # ── 일반 검색 쿼리 ────────────────────────────────────
     await message.channel.send("잠시만 기다려 주세요...")
     try:
-        response = sql_search(content, limit=5)
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, lambda: sql_search(content, limit=5))
         if len(response) > 1900:
             chunks = [response[i:i + 1900] for i in range(0, len(response), 1900)]
             for chunk in chunks:

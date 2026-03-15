@@ -305,7 +305,18 @@ def batch_to_db(data_batch):
     finally:
         release_connection(conn)
 
-def csv_to_db(csv_path):
+def csv_to_db(csv_path, today=None):
+    """CSV 파일을 DB에 적재.
+    today: parse_deadline 기준 날짜. 미지정 시 파일명에서 추출, 그것도 없으면 현재 날짜.
+    """
+    import re as _re
+    from datetime import date as _date
+
+    if today is None:
+        m = _re.search(r'(\d{4})-(\d{2})-(\d{2})', csv_path)
+        if m:
+            today = _date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+
     conn = connect_postgres()
     try:
         cursor = conn.cursor()
@@ -316,7 +327,6 @@ def csv_to_db(csv_path):
             reader = csv.DictReader(csvfile)
             for i, row in enumerate(reader):
                 try:
-                    logging.info(f"{i}번째 행 입력")
                     _jobkorea_write(
                         conn=conn,
                         cursor=cursor,
@@ -327,7 +337,7 @@ def csv_to_db(csv_path):
                         form=JobPreprocessor.parse_form(row['형태']),
                         region=JobPreprocessor.parse_region(row['지역']),
                         annual_salary=JobPreprocessor.parse_salary(row['연봉']),
-                        deadline=JobPreprocessor.parse_deadline(row['마감일']),
+                        deadline=JobPreprocessor.parse_deadline(row['마감일'], today=today),
                         tags=JobPreprocessor.parse_explanation(row['설명']),
                         link=row['링크'],
                     )

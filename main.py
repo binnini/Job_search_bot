@@ -27,4 +27,10 @@ if __name__ == "__main__":
     except Exception as e:
         logging.error(f"예기치 못한 오류 발생: {e}")
 
+    try:
+        from analytics.snapshot import save_snapshot
+        save_snapshot()
+    except Exception as e:
+        logging.warning(f"스냅샷 저장 실패 (크롤링 결과에는 영향 없음): {e}")
+
     logging.info("프로그램 종료")

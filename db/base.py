@@ -192,6 +192,19 @@ def create_tables(conn, cursor):
         """)
 
         cursor.execute("""
+        CREATE TABLE IF NOT EXISTS job_market_daily (
+            date DATE PRIMARY KEY,
+            total_valid_jobs INTEGER,
+            new_jobs INTEGER,
+            avg_salary INTEGER,
+            top_tags JSONB,
+            region_dist JSONB,
+            experience_dist JSONB,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+        """)
+
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_user_sub_user_id
             ON user_subscriptions(discord_user_id)
         """)

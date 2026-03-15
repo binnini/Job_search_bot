@@ -17,6 +17,7 @@ LLM(EXAONE 3.5 7.8B)을 활용한 시맨틱 태깅, 키워드 확장, 재순위 
 - **LLM 키워드 확장** — 검색 키워드를 동의어·기술 스택으로 자동 확장하여 recall 향상 (`프론트 엔지니어` → `프론트엔드`, `React`, `Vue` 등)
 - **LLM 재순위** — 검색 후보를 관련도 순으로 재정렬하여 precision 향상
 - **LLM 시맨틱 태깅** — 크롤링 시 공고명 기반으로 직무·기술 태그를 자동 생성, 공고명에 없는 키워드로도 검색 가능
+- **채용 시장 분석** — 인기 기술 스택·평균 연봉·지역 분포를 `!인사이트` 명령어로 즉시 조회, 일별 스냅샷 저장
 - **구독 알림** — 키워드·지역·경력·연봉 조건을 등록해두면 24시간마다 신규 공고를 DM으로 수신
 - **데이터 품질 관리** — 수집 시점에 이상값을 차단하고 `data_quality_log` 테이블에 이력 기록
 - **AND/OR 폴백·동의어 사전** — AND 검색 결과 없으면 자동 OR 폴백, `FE → 프론트엔드` 치환
@@ -40,7 +41,8 @@ LLM(EXAONE 3.5 7.8B)을 활용한 시맨틱 태깅, 키워드 확장, 재순위 
   ├─ user_profiles       사용자 공통 필터 (지역/형태/경력/연봉)
   ├─ user_subscriptions  키워드 구독
   ├─ notification_log    알림 발송 이력
-  └─ data_quality_log    파싱 이상값 이력
+  ├─ data_quality_log    파싱 이상값 이력
+  └─ job_market_daily    날짜별 채용 시장 스냅샷 (분석 레이어)
     │
     └─ [Discord Bot]
          ├─ 자연어 검색  →  extract_filters() → 키워드 확장 → SQL → 재순위
@@ -149,6 +151,7 @@ def validate_salary(value):
 | `!구독해제 <번호>` | 특정 키워드 구독 해제 |
 | `!구독해제 전체` | 모든 구독 해제 |
 | `!알림테스트` | 즉시 알림 조건 확인 및 DM 발송 |
+| `!인사이트` | 채용 시장 현황 (인기 스택·연봉·지역·경력 분포) |
 | 자연어 입력 | 공고 검색 (예: `서울 백엔드 정규직 신입`) |
 
 ---
@@ -216,10 +219,19 @@ python db/tag_recruits.py --date 2026-03-14  # 특정 수집일만
 python -m discord_bot.bot
 ```
 
-### 6. cron 자동화
+### 6. 분석 스냅샷 수동 실행
+
+크롤링 완료 후 `main.py`에서 자동 실행되지만, 단독으로도 실행 가능합니다.
 
 ```bash
-# 매일 06시 크롤링 + LLM 태깅
+python analytics/snapshot.py                    # 오늘 날짜 스냅샷
+python analytics/snapshot.py --date 2026-03-14  # 특정 날짜 재생성
+```
+
+### 7. cron 자동화
+
+```bash
+# 매일 06시 크롤링 + LLM 태깅 + 분석 스냅샷
 0 6 * * * cd /path/to/job_search_bot && python main.py
 ```
 

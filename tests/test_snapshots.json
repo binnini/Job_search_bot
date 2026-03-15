@@ -327,5 +327,623 @@
       "max_experience": 0,
       "min_annual_salary": 5000
     }
+  },
+  "지역 단일 - 대구": {
+    "query": "대구 공고",
+    "filters": {
+      "region": "대구"
+    }
+  },
+  "지역 단일 - 광주": {
+    "query": "광주 채용 공고",
+    "filters": {
+      "region": "광주"
+    }
+  },
+  "지역 단일 - 울산": {
+    "query": "울산 공고 보여줘",
+    "filters": {
+      "region": "울산"
+    }
+  },
+  "지역 단일 - 세종": {
+    "query": "세종시 채용",
+    "filters": {
+      "region": "세종",
+      "company_name": "시"
+    }
+  },
+  "지역 단일 - 강원": {
+    "query": "강원도 공고",
+    "filters": {
+      "region": "강원",
+      "company_name": "도"
+    }
+  },
+  "키워드 단일 - PM": {
+    "query": "PM 채용 공고",
+    "filters": {
+      "keyword": "PM"
+    }
+  },
+  "키워드 단일 - DevOps": {
+    "query": "데브옵스 채용",
+    "filters": {
+      "company_name": "데브옵스"
+    }
+  },
+  "키워드 단일 - QA": {
+    "query": "QA 공고 찾아줘",
+    "filters": {
+      "company_name": "QA"
+    }
+  },
+  "키워드 단일 - 보안": {
+    "query": "보안 엔지니어 공고",
+    "filters": {
+      "keyword": "보안 엔지니어"
+    }
+  },
+  "키워드 단일 - 게임": {
+    "query": "게임 기획자 채용",
+    "filters": {
+      "keyword": "게임 서비스기획"
+    }
+  },
+  "키워드 단일 - 의료": {
+    "query": "의료계 공고",
+    "filters": {
+      "company_name": "의료계"
+    }
+  },
+  "키워드 단일 - 법무": {
+    "query": "법무팀 채용 공고",
+    "filters": {
+      "company_name": "법무팀"
+    }
+  },
+  "동의어 - 프론트엔드 축약": {
+    "query": "프론트 공고 보여줘",
+    "filters": {
+      "company_name": "프론트"
+    }
+  },
+  "동의어 - 풀스택": {
+    "query": "풀스택 채용",
+    "filters": {
+      "keyword": "풀스택"
+    }
+  },
+  "동의어 - 기획 직무": {
+    "query": "기획자 공고",
+    "filters": {
+      "company_name": "서비스기획"
+    }
+  },
+  "동의어 - 데이터 과학자": {
+    "query": "데이터 사이언티스트 채용",
+    "filters": {
+      "keyword": "데이터 사이언티스트"
+    }
+  },
+  "동의어 - 머신러닝 영문 약어": {
+    "query": "ML 엔지니어 공고",
+    "filters": {
+      "keyword": "ML 엔지니어"
+    }
+  },
+  "동의어 - 앱 개발": {
+    "query": "앱 개발자 채용",
+    "filters": {
+      "keyword": "앱 개발자"
+    }
+  },
+  "동의어 - 안드로이드": {
+    "query": "안드로이드 개발 공고",
+    "filters": {
+      "keyword": "안드로이드 개발"
+    }
+  },
+  "약어 - DBA": {
+    "query": "DBA 채용 공고",
+    "filters": {
+      "company_name": "DBA"
+    }
+  },
+  "약어 - UI UX": {
+    "query": "UI UX 디자이너 공고",
+    "filters": {
+      "keyword": "UI UX 디자이너"
+    }
+  },
+  "동의어 - 알바": {
+    "query": "알바 공고",
+    "filters": {
+      "company_name": "알바"
+    }
+  },
+  "복합 3개 - 지역+키워드+고용형태": {
+    "query": "세종 PM 정규직 공고",
+    "filters": {
+      "keyword": "PM",
+      "region": "세종",
+      "form": "정규직"
+    }
+  },
+  "복합 3개 - 지역+키워드+경력 1": {
+    "query": "강원 프론트 신입 채용",
+    "filters": {
+      "region": "강원",
+      "max_experience": 0,
+      "company_name": "프론트"
+    }
+  },
+  "복합 3개 - 지역+키워드+경력 2": {
+    "query": "충북 보안 경력 3년 공고",
+    "filters": {
+      "region": "충북",
+      "max_experience": 3,
+      "company_name": "보안"
+    }
+  },
+  "복합 3개 - 지역+고용형태+연봉": {
+    "query": "제주 파견직 연봉 3000만원",
+    "filters": {
+      "region": "제주",
+      "form": "파견직",
+      "min_annual_salary": 3000
+    }
+  },
+  "복합 4개 - 지역+키워드+고용형태+연봉": {
+    "query": "대구 풀스택 정규직 연봉 5천만원",
+    "filters": {
+      "keyword": "풀스택",
+      "region": "대구",
+      "form": "정규직",
+      "min_annual_salary": 5000
+    }
+  },
+  "복합 4개 - 지역+키워드+고용형태+경력 1": {
+    "query": "광주 데이터 분석 인턴 신입 공고",
+    "filters": {
+      "keyword": "데이터 분석",
+      "region": "광주",
+      "form": "인턴",
+      "max_experience": 0
+    }
+  },
+  "복합 4개 - 지역+키워드+고용형태+경력 2": {
+    "query": "울산 영업 정규직 5년차 채용",
+    "filters": {
+      "keyword": "영업",
+      "region": "울산",
+      "form": "정규직",
+      "max_experience": 5
+    }
+  },
+  "복합 4개 - 지역+키워드+고용형태+마감일": {
+    "query": "대전 게임 프리랜서 이번달 마감",
+    "filters": {
+      "keyword": "게임",
+      "region": "대전",
+      "form": "프리랜서",
+      "min_deadline": "2026-03-01"
+    }
+  },
+  "복합 5개 - 지역+키워드+고용형태+경력+연봉 1": {
+    "query": "서울 백엔드 정규직 신입 연봉 4000만원",
+    "filters": {
+      "keyword": "백엔드",
+      "region": "서울",
+      "form": "정규직",
+      "max_experience": 0,
+      "min_annual_salary": 4000
+    }
+  },
+  "복합 5개 - 지역+키워드+고용형태+경력+마감일 1": {
+    "query": "경기 데브옵스 정규직 5년차 이번달 마감 공고",
+    "filters": {
+      "keyword": "데브옵스",
+      "region": "경기",
+      "form": "정규직",
+      "max_experience": 5,
+      "min_deadline": "2026-03-01"
+    }
+  },
+  "복합 5개 - 지역+키워드+고용형태+경력+마감일 2": {
+    "query": "인천 마케팅 계약직 1년차 다음달 마감",
+    "filters": {
+      "keyword": "마케팅",
+      "region": "인천",
+      "form": "계약직",
+      "max_experience": 1,
+      "min_deadline": "2026-04-01"
+    }
+  },
+  "복합 5개 - 지역+키워드+고용형태+경력+연봉 2": {
+    "query": "부산 디자인 프리랜서 3년차 6000만원 공고",
+    "filters": {
+      "keyword": "디자인",
+      "region": "부산",
+      "form": "프리랜서",
+      "max_experience": 3,
+      "min_annual_salary": 6000
+    }
+  },
+  "복합 3개 - 회사명+키워드+고용형태": {
+    "query": "네이버 서버 개발자 정규직 채용",
+    "filters": {
+      "keyword": "네이버 서버 개발자",
+      "form": "정규직"
+    }
+  },
+  "복합 3개 - 회사명+키워드+경력": {
+    "query": "토스 데이터 분석가 신입 공고",
+    "filters": {
+      "keyword": "토스 데이터 분석가",
+      "max_experience": 0
+    }
+  },
+  "복합 3개 - 회사명+키워드+마감일": {
+    "query": "배달의민족 PM 이번달 마감 채용",
+    "filters": {
+      "keyword": "배달의민족 PM",
+      "min_deadline": "2026-03-01"
+    }
+  },
+  "복합 4개 - 지역+키워드+고용형태+경력": {
+    "query": "경남 QA 정규직 신입 공고",
+    "filters": {
+      "region": "경남",
+      "form": "정규직",
+      "max_experience": 0,
+      "company_name": "QA"
+    }
+  },
+  "복합 5개 - 지역+키워드+고용형태+경력+연봉 3": {
+    "query": "대전 연구원 정규직 신입 3500만원",
+    "filters": {
+      "keyword": "연구원",
+      "region": "대전",
+      "form": "정규직",
+      "max_experience": 0,
+      "min_annual_salary": 3500
+    }
+  },
+  "구어체 - 희망 표현": {
+    "query": "대구에서 일할 수 있는 프론트엔드 공고 찾고 싶어",
+    "filters": {
+      "keyword": "프론트엔드 찾고",
+      "region": "대구"
+    }
+  },
+  "구어체 - 검색 요청": {
+    "query": "연봉 6천 이상 주는 보안 엔지니어 자리 알아봐줘",
+    "filters": {
+      "keyword": "천 주는 보안 엔지니어 자리 알아봐줘",
+      "min_annual_salary": 6
+    }
+  },
+  "구어체 - 의문문": {
+    "query": "이번 달에 마감하는 광주 정규직 채용 있어?",
+    "filters": {
+      "keyword": "에 마감하는 있어?",
+      "region": "광주",
+      "form": "정규직",
+      "min_deadline": "2026-03-01"
+    }
+  },
+  "구어체 - 권유형": {
+    "query": "신입이 지원할 만한 제주도 게임 기획자 공고 보여줄래",
+    "filters": {
+      "keyword": "이 지원할 만한 도 게임 서비스기획 보여줄래",
+      "region": "제주",
+      "max_experience": 0
+    }
+  },
+  "구어체 - 조건 나열형": {
+    "query": "경력 2년차 풀스택 개발자 부산에서 갈만한 곳 추천해줘",
+    "filters": {
+      "keyword": "풀스택 개발자 갈만한 곳 추천해줘",
+      "region": "부산",
+      "max_experience": 2
+    }
+  },
+  "구어체 - 조건 명시적 분리": {
+    "query": "직무는 마케팅, 지역은 대전, 신입으로 부탁해",
+    "filters": {
+      "keyword": "직무는 마케팅, 지역은 , 부탁해",
+      "region": "대전",
+      "max_experience": 0
+    }
+  },
+  "구어체 - 조건 역순 나열": {
+    "query": "연봉 5000, 경력 3년, 백엔드 서울 공고 검색해줘",
+    "filters": {
+      "keyword": ", , 백엔드",
+      "region": "서울",
+      "max_experience": 3,
+      "min_annual_salary": 5000
+    }
+  },
+  "구어체 - AI 키워드": {
+    "query": "요즘 뜨는 AI 개발자 공고 뭐 있어",
+    "filters": {
+      "keyword": "요즘 뜨는 AI 개발자 뭐"
+    }
+  },
+  "구어체 - 노이즈 포함": {
+    "query": "진짜 당장 내일 마감하는 부산 알바",
+    "filters": {
+      "keyword": "진짜 당장 내일 마감하는 알바",
+      "region": "부산"
+    }
+  },
+  "구어체 - 자기소개 포함": {
+    "query": "저는 3년차 프론트 개발자인데 강원도 공고 있을까요",
+    "filters": {
+      "keyword": "저는 프론트 개발자인데 도 있을까요",
+      "region": "강원",
+      "max_experience": 3
+    }
+  },
+  "구어체 - 초장문": {
+    "query": "안녕 나는 대전에서 학교를 졸업했고 이번에 데이터 분석가로 취업하고 싶은데 혹시 연봉 4000 이상 주는 정규직 신입 자리가 이번 달 안에 마감하는 걸로 있을까",
+    "filters": {
+      "keyword": "안녕 나는 학교를 졸업했고 이번에 데이터 분석가로 취업하고 싶은데 혹시 주는 자리가 안에 마감하는 걸로 있을까",
+      "region": "대전",
+      "form": "정규직",
+      "max_experience": 0,
+      "min_annual_salary": 4000,
+      "min_deadline": "2026-03-01"
+    }
+  },
+  "구어체 - 괄호 설명": {
+    "query": "프론트(리액트 중심) 5년차 정규직(계약직 불가) 서울 채용",
+    "filters": {
+      "keyword": "프론트(리액트 중심) (계약직 불가)",
+      "region": "서울",
+      "form": "정규직",
+      "max_experience": 5
+    }
+  },
+  "경계값 - 경력 10년": {
+    "query": "경력 10년 이상 공고",
+    "filters": {
+      "max_experience": 10
+    }
+  },
+  "경계값 - 경력 15년": {
+    "query": "15년차 시니어 개발자 공고",
+    "filters": {
+      "keyword": "시니어 개발자",
+      "max_experience": 15
+    }
+  },
+  "경계값 - 연봉 1억 5천": {
+    "query": "연봉 1억 5천만원 이상 채용",
+    "filters": {
+      "min_annual_salary": 15000
+    }
+  },
+  "경계값 - 연봉 3억": {
+    "query": "연봉 3억 공고",
+    "filters": {
+      "min_annual_salary": 30000
+    }
+  },
+  "경계값 - 연봉 단위 생략": {
+    "query": "연봉 9천 이상 보여줘",
+    "filters": {
+      "keyword": "천",
+      "min_annual_salary": 9
+    }
+  },
+  "경계값 - 경력 0년": {
+    "query": "경력 0년 신입 공고",
+    "filters": {
+      "keyword": "0년",
+      "max_experience": 0
+    }
+  },
+  "경계값 - 연봉 최저": {
+    "query": "연봉 2400만원 공고",
+    "filters": {
+      "min_annual_salary": 2400
+    }
+  },
+  "경계값 - 경력 1년차": {
+    "query": "경력 1년차 공고",
+    "filters": {
+      "max_experience": 1
+    }
+  },
+  "오탈자 - 백엔드": {
+    "query": "빽엔드 채용 공고",
+    "filters": {
+      "company_name": "빽엔드"
+    }
+  },
+  "비표준 - 서울시": {
+    "query": "서울시 마케팅 공고",
+    "filters": {
+      "keyword": "시 마케팅",
+      "region": "서울"
+    }
+  },
+  "비표준 - 정직원": {
+    "query": "정직원 채용",
+    "filters": {
+      "company_name": "정직원"
+    }
+  },
+  "오탈자 - 데이터": {
+    "query": "데이타 분석가 공고",
+    "filters": {
+      "keyword": "데이타 분석가"
+    }
+  },
+  "대소문자 - 소문자 devops": {
+    "query": "devops 엔지니어",
+    "filters": {
+      "keyword": "DevOps 엔지니어"
+    }
+  },
+  "대소문자 - 카멜케이스": {
+    "query": "FrontEnd 채용",
+    "filters": {
+      "company_name": "FrontEnd"
+    }
+  },
+  "오탈자 - 지역": {
+    "query": "설울 정규직 공고",
+    "filters": {
+      "form": "정규직",
+      "company_name": "설울"
+    }
+  },
+  "마감일 - 특정 월": {
+    "query": "3월 마감 공고",
+    "filters": {
+      "min_deadline": "2026-03-01"
+    }
+  },
+  "마감일 - 연말": {
+    "query": "12월 마감 정규직 공고",
+    "filters": {
+      "form": "정규직",
+      "min_deadline": "2026-12-01"
+    }
+  },
+  "마감일 - 복합 조건": {
+    "query": "이번달 마감하는 대전 인턴 공고",
+    "filters": {
+      "region": "대전",
+      "form": "인턴",
+      "min_deadline": "2026-03-01",
+      "company_name": "마감하는"
+    }
+  },
+  "마감일 - 특정 날짜": {
+    "query": "12월 25일 마감 공고",
+    "filters": {
+      "keyword": "25일",
+      "min_deadline": "2026-12-01"
+    }
+  },
+  "기만 - 복수 지역": {
+    "query": "서울이나 경기 지역 채용",
+    "filters": {
+      "keyword": "이나 경기 지역",
+      "region": "서울"
+    }
+  },
+  "기만 - 제외 키워드": {
+    "query": "자바 말고 파이썬 백엔드 공고",
+    "filters": {
+      "keyword": "자바 말고 파이썬 백엔드"
+    }
+  },
+  "기만 - 경력 배제 신입": {
+    "query": "경력직 말고 신입 채용",
+    "filters": {
+      "keyword": "경력직 말고",
+      "max_experience": 0
+    }
+  },
+  "기만 - 다중 키워드": {
+    "query": "기획이랑 마케팅 둘 다 하는 공고",
+    "filters": {
+      "keyword": "기획이랑 마케팅 둘 다"
+    }
+  },
+  "기만 - 경력 범위": {
+    "query": "경력 1년에서 3년 사이",
+    "filters": {
+      "keyword": "3년 사이",
+      "max_experience": 1
+    }
+  },
+  "회사명 - 토스": {
+    "query": "토스 공고",
+    "filters": {
+      "company_name": "토스"
+    }
+  },
+  "회사명 - 영어": {
+    "query": "Google 채용",
+    "filters": {
+      "company_name": "Google"
+    }
+  },
+  "회사명 - 당근마켓": {
+    "query": "당근마켓 개발자 공고",
+    "filters": {
+      "keyword": "당근마켓 개발자"
+    }
+  },
+  "회사명 - 삼성전자": {
+    "query": "삼성 전자 신입 채용",
+    "filters": {
+      "keyword": "삼성 전자",
+      "max_experience": 0
+    }
+  },
+  "필터 불가 - 단순 인사": {
+    "query": "안녕하세요",
+    "filters": {
+      "keyword": "안녕하세요"
+    }
+  },
+  "필터 불가 - 맥락 없는 단어": {
+    "query": "배고프다",
+    "filters": {
+      "keyword": "배고프다"
+    }
+  },
+  "필터 불가 - 회사 복지 질문": {
+    "query": "식대 지원되는 회사",
+    "filters": {
+      "keyword": "식대 지원되는 회사"
+    }
+  },
+  "필터 불가 - 대기업": {
+    "query": "대기업 공고만",
+    "filters": {
+      "keyword": "공고만",
+      "company_name": "대기업"
+    }
+  },
+  "결과없음 - 초고연봉+알바": {
+    "query": "연봉 2억 편의점 아르바이트",
+    "filters": {
+      "keyword": "편의점",
+      "form": "아르바이트",
+      "min_annual_salary": 20000
+    }
+  },
+  "결과없음 - 비현실적 경력": {
+    "query": "경력 30년차 인턴 공고",
+    "filters": {
+      "form": "인턴",
+      "max_experience": 30
+    }
+  },
+  "결과없음 - 신입+초고연봉": {
+    "query": "신입 연봉 5억 이상 채용",
+    "filters": {
+      "max_experience": 0,
+      "min_annual_salary": 50000
+    }
+  },
+  "결과없음 - 희소 조건": {
+    "query": "제주도 항공우주 엔지니어 신입 연봉 1억 5천만원 정규직",
+    "filters": {
+      "keyword": "도 항공우주 엔지니어",
+      "region": "제주",
+      "form": "정규직",
+      "max_experience": 0,
+      "min_annual_salary": 15000
+    }
   }
 }

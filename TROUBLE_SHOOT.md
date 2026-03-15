@@ -902,6 +902,131 @@ LLM이 같은 직무의 동의어가 아니라 연관 직무 전체를 포함했
 
 ---
 
+## 23. 방안 3 Before/After 평가 결과가 동일 — 테스트셋 편향
+
+### Problem
+
+LLM 시맨틱 태깅(방안 3) 적용 전후 검색 품질을 `evaluate.py`로 측정했을 때
+Before와 After가 완전히 동일한 결과가 나왔습니다.
+
+```
+Before: Hit@5=52.0%  Hit@10=58.0%  MRR=0.3941
+After:  Hit@5=52.0%  Hit@10=58.0%  MRR=0.3941  ← 변화 없음
+```
+
+원인은 `testset.json` 생성 방식에 있었습니다.
+`generate_testset.py`는 LLM에게 "이 공고를 찾을 쿼리를 만들어줘"라고 요청하는 역방향 생성 방식이었습니다.
+
+LLM은 공고명에서 직접 단어를 가져와 쿼리를 생성하기 때문에,
+생성된 쿼리는 이미 공고명에 포함된 단어를 사용합니다.
+공고명으로 검색하면 이미 찾히므로, LLM 태그를 추가해도 결과가 바뀌지 않았습니다.
+
+```
+공고명: "백엔드 API 개발자 채용 (Spring Boot)"
+생성 쿼리: "서울 백엔드 Spring Boot 신입"  ← 공고명 단어 그대로 사용
+→ 태그 없이도 공고명 ILIKE로 이미 검색됨
+```
+
+태그 기반 검색의 진짜 가치는 공고명에 없는 표현으로 검색할 때 나타납니다.
+
+### Solution
+
+공고명에 나타나지 않는 동의어·기술 스택 쿼리로 측정하는 `evaluate_tagging.py`를 별도로 작성했습니다.
+
+```python
+# 공고명에 없지만 의미적으로 연관된 동의어 쿼리 쌍 정의
+SYNONYM_PAIRS = [
+    ("프론트엔드", ["frontend", "React", "Vue", "UI개발"]),
+    ("데이터분석", ["analytics", "SQL", "Python", "tableau"]),
+    ("UX디자인",   ["사용자경험", "UI/UX", "Figma"]),
+    ...
+]
+```
+
+Before(공고명만 매칭)와 After(공고명+LLM 태그 매칭)를 비교한 결과:
+
+```
+평균 Recall@10 Before: 37.8%
+평균 Recall@10 After:  88.9%  (+51.1%p)
+```
+
+프론트엔드(+80%p), 데이터분석(+100%p), UX디자인(+90%p), 임베디드(+90%p) 에서 특히 큰 효과가 확인되었습니다.
+
+---
+
+## 24. `_jobkorea_write()`가 recruit_id를 반환하지 않아 LLM 태깅 불가
+
+### Problem
+
+`batch_to_db()`에 LLM 태깅 연동을 추가하려면 신규 삽입된 공고의 ID 목록이 필요했습니다.
+그러나 `_jobkorea_write()`는 반환값이 없었고, 중복 공고(`ON CONFLICT DO NOTHING`)와 신규 삽입을 구분할 방법도 없었습니다.
+
+```python
+def _jobkorea_write(conn, cursor, row, today):
+    cursor.execute("INSERT INTO recruits ... ON CONFLICT DO NOTHING")
+    conn.commit()
+    # return 없음 → 신규 삽입 여부 알 수 없음
+```
+
+태깅 대상을 알 수 없어 전체 배치를 다시 쿼리하거나, 중복 공고도 불필요하게 재태깅하는 문제가 발생할 수 있었습니다.
+
+### Solution
+
+`_jobkorea_write()`에서 신규 삽입 시 `recruit_id`를 반환하고, 중복(CONFLICT)이면 `None`을 반환하도록 변경했습니다.
+
+```python
+def _jobkorea_write(conn, cursor, row, today):
+    recruit_id = None
+    # ... INSERT 로직 ...
+    cursor.execute("INSERT INTO recruits ... ON CONFLICT DO NOTHING RETURNING id")
+    row_result = cursor.fetchone()
+    if row_result:
+        recruit_id = row_result[0]  # 신규 삽입 시 ID 반환
+    conn.commit()
+    return recruit_id  # 중복이면 None
+```
+
+`batch_to_db()`에서 `None`이 아닌 ID만 모아 태깅 대상으로 전달합니다.
+
+```python
+new_recruit_ids = [rid for rid in insert_results if rid is not None]
+if use_llm_tagging and new_recruit_ids:
+    tag_recruit_batch(new_recruit_ids)
+```
+
+---
+
+## 25. cron 크롤링 시 LLM 태깅이 자동 실행되지 않는 문제
+
+### Problem
+
+`db/tagger.py`와 `batch_to_db(use_llm_tagging=True)` 연동을 구현했지만,
+실제 크롤링을 담당하는 `crawling/scraper.py`에서는 기본값(`False`)으로 호출하고 있었습니다.
+
+```python
+# scraper.py (변경 전)
+batch_to_db(data_batch)  # use_llm_tagging 기본값=False → 태깅 안 됨
+```
+
+매일 06시 cron이 `main.py → scraper.py → batch_to_db()` 경로로 실행되므로,
+소급 태깅 스크립트(`db/tag_recruits.py`)를 별도로 수동 실행하지 않는 한 신규 공고에 태그가 붙지 않았습니다.
+
+### Solution
+
+`scraper.py`의 모든 `batch_to_db()` 호출에 `use_llm_tagging=True`를 명시했습니다.
+
+```python
+# 5페이지마다 중간 저장
+batch_to_db(data_batch, use_llm_tagging=True)
+
+# 크롤링 종료 후 잔여 배치
+batch_to_db(data_batch, use_llm_tagging=True)
+```
+
+Ollama 서버(Mac)가 꺼져 있는 경우 `call_tagger()` 내부에서 예외를 잡아 `failed` 카운트만 증가하고 크롤링/저장 자체는 정상 진행됩니다.
+
+---
+
 ## 17. 소스 파일이 gitignored 디렉토리에 위치하는 문제
 
 ### Problem

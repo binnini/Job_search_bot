@@ -4,17 +4,22 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Discord](https://img.shields.io/badge/Discord.py-2.x-5865F2?logo=discord&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-1.x-2EAD33?logo=playwright&logoColor=white)
+![Ollama](https://img.shields.io/badge/Ollama-EXAONE_3.5_7.8B-black?logo=ollama&logoColor=white)
 
 잡코리아 채용 공고를 매일 자동 수집하고, 디스코드에서 자연어로 검색하거나 관심 조건을 구독해두면 신규 공고를 DM으로 받을 수 있는 봇입니다.
+LLM(EXAONE 3.5 7.8B)을 활용한 시맨틱 태깅, 키워드 확장, 재순위 기능으로 검색 품질을 높였습니다.
 
 ---
 
 ## 주요 기능
 
 - **자연어 검색** — `서울 백엔드 정규직 신입 공고` 형태의 구어체 쿼리를 정규식으로 파싱해 SQL WHERE 절로 변환
+- **LLM 키워드 확장** — 검색 키워드를 동의어·기술 스택으로 자동 확장하여 recall 향상 (`프론트 엔지니어` → `프론트엔드`, `React`, `Vue` 등)
+- **LLM 재순위** — 검색 후보를 관련도 순으로 재정렬하여 precision 향상
+- **LLM 시맨틱 태깅** — 크롤링 시 공고명 기반으로 직무·기술 태그를 자동 생성, 공고명에 없는 키워드로도 검색 가능
 - **구독 알림** — 키워드·지역·경력·연봉 조건을 등록해두면 24시간마다 신규 공고를 DM으로 수신
 - **데이터 품질 관리** — 수집 시점에 이상값을 차단하고 `data_quality_log` 테이블에 이력 기록
-- **검색 품질 보장** — AND 검색 결과 없으면 자동으로 OR 폴백, 동의어 사전으로 `FE → 프론트엔드` 치환
+- **AND/OR 폴백·동의어 사전** — AND 검색 결과 없으면 자동 OR 폴백, `FE → 프론트엔드` 치환
 
 ---
 
@@ -22,12 +27,15 @@
 
 ```
 [잡코리아]
-    │  Playwright 크롤링 (systemd 타이머, 일 1회)
+    │  Playwright 크롤링 (cron, 매일 06시)
+    ▼
+[EXAONE 3.5 7.8B via Ollama]  ← 시맨틱 태그 자동 생성 (방안 3)
+    │
     ▼
 [PostgreSQL]
   ├─ recruits            공고 (경력/형태/연봉/마감일)
   ├─ companies           기업명
-  ├─ tags                기술스택 등 키워드
+  ├─ tags                기술스택 + LLM 생성 시맨틱 태그
   ├─ regions/subregions  지역 대·소분류
   ├─ user_profiles       사용자 공통 필터 (지역/형태/경력/연봉)
   ├─ user_subscriptions  키워드 구독
@@ -35,27 +43,66 @@
   └─ data_quality_log    파싱 이상값 이력
     │
     └─ [Discord Bot]
-         ├─ 자연어 검색  →  extract_filters() → SQL WHERE 절
+         ├─ 자연어 검색  →  extract_filters() → 키워드 확장 → SQL → 재순위
          ├─ 구독 등록/해제 (드롭다운 UI)
-         └─ 정기 알림 (24h 백그라운드 태스크)
+         └─ 정기 알림 (24h) → 키워드 확장 → 매칭 → 재순위 → DM 발송
 ```
 
 ### 검색 흐름
 
 ```
-사용자 입력: "서울 백엔드 정규직 신입 공고"
+사용자 입력: "서울 프론트 엔지니어 신입 공고"
         │
         ▼
-extract_filters()        정규식 기반 파싱 — DB 불필요, ms 단위 응답
-  { region: "서울", keyword: "백엔드", form: "정규직", max_experience: 0 }
+extract_filters()           정규식 기반 파싱
+  { region: "서울", keyword: "프론트엔드", max_experience: 0 }
         │
         ▼
-search_recruits_by_filter()   SQLAlchemy ORM
-  AND 검색 → 결과 없으면 OR 폴백
+expand_keyword()            EXAONE LLM 키워드 확장 (방안 1)
+  ["프론트엔드", "frontend", "React", "Vue", "UI개발", ...]
         │
         ▼
-Discord 메시지 반환
+search_recruits_by_filter() OR 매칭으로 후보 50건 검색
+        │
+        ▼
+rerank()                    EXAONE LLM 관련도 재순위 (방안 2)
+        │
+        ▼
+Discord 메시지 반환 (상위 5건)
 ```
+
+### 구독 알림 흐름
+
+```
+24h 백그라운드 태스크
+        │
+        ▼
+get_new_recruits()          최근 24시간 신규 공고 조회
+        │
+        ▼
+expand_keyword()            구독 키워드 LLM 확장 (방안 1)
+        │
+        ▼
+_match()                    확장 키워드 OR 매칭 + 프로필 필터
+        │
+        ▼
+rerank()                    LLM 관련도 재순위 (방안 2)
+        │
+        ▼
+DM 발송 (상위 10건)
+```
+
+---
+
+## LLM 검색 품질 개선 결과
+
+| 방안 | 지표 | Before | After | 개선 |
+|------|------|--------|-------|------|
+| 방안 1: 키워드 확장 | 구독 매칭 건수 | 기준 | +30% | recall 향상 |
+| 방안 2: 재순위 | Precision@10 | 45.0% | 64.0% | +19.0%p |
+| 방안 3: 시맨틱 태깅 | Recall@10 (동의어 쿼리) | 37.8% | 88.9% | +51.1%p |
+
+> 검색 품질 기준선 (testset 100건): Hit@5=52%, Hit@10=58%, MRR=0.394, Zero-result=3%
 
 ---
 
@@ -64,10 +111,10 @@ Discord 메시지 반환
 | 결정 | 이유 |
 |------|------|
 | Playwright (Selenium 대체) | 봇 탐지 우회를 위해 브라우저 레벨 직접 제어 필요 |
-| 정규식 필터 추출 (LLM 제거) | 필터 대부분이 정형 패턴 — LLM 대비 응답 수 ms, 결정론적 |
-| FAISS 벡터 검색 제거 | 공고 데이터가 키워드 목록 형식 → 시맨틱 임베딩 효과 낮음, 730MB 상시 점유 대비 효과 미미 |
+| 정규식 필터 추출 (LLM 제거) | 필터 대부분이 정형 패턴 — LLM 대비 응답 ms, 결정론적 |
+| FAISS 벡터 검색 제거 | 공고 데이터가 키워드 목록 형식 → 시맨틱 임베딩 효과 낮음, 730MB 상시 점유 |
 | PostgreSQL SQL 검색 | 지역/경력/연봉/형태는 정형 컬럼 → WHERE 절이 벡터 거리보다 정확 |
-| Connection Pool (psycopg2) | 크롤링 배치 삽입 시 연결 생성 오버헤드 제거 |
+| EXAONE 3.5 7.8B (gemma3:4b, qwen2.5:7b 비교 후 선정) | 한국어 태깅 품질 우수, 지시 준수 안정적 |
 | AND → OR 폴백 | 복합 키워드 검색 시 결과 0건 방지 |
 | pg_trgm GIN 인덱스 | `announcement_name ILIKE` 검색을 Seq Scan → Bitmap Index Scan으로 개선 |
 
@@ -132,23 +179,49 @@ cp .env.example .env
 | `TARGET_URL` | 크롤링 대상 URL |
 | `CRAWL_LOG_DIR` | 크롤링 로그 저장 경로 |
 
-### 3. 크롤링 실행
+### 3. Ollama 설정 (LLM 기능)
+
+LLM 기반 태깅·키워드 확장·재순위 기능은 Ollama가 필요합니다.
 
 ```bash
-python main.py              # 최근 1일치 수집 (기본)
+# LAN 내 다른 기기에서도 접속 가능하도록 바인딩
+OLLAMA_HOST=0.0.0.0 ollama serve
+
+# EXAONE 3.5 7.8B 모델 다운로드
+ollama pull exaone3.5:7.8b
+```
+
+`db/tagger.py`, `discord_bot/keyword_expander.py`, `discord_bot/reranker.py` 내 `OLLAMA_URL`을 실제 호스트로 수정합니다.
+
+> Ollama 서버가 꺼져 있어도 크롤링·검색·알림의 기본 기능은 정상 동작합니다. LLM 호출만 건너뜁니다.
+
+### 4. 크롤링 실행
+
+```bash
+python main.py              # 최근 1일치 수집 (기본) + LLM 태깅 자동 실행
 python main.py --days 7     # 최근 N일치 수집
 python main.py --fresh      # 기존 데이터 전체 삭제 후 재수집
 ```
 
-### 4. 디스코드 봇 실행
+기존 공고 소급 태깅:
+
+```bash
+python db/tag_recruits.py                    # 마감 유효 공고 전체
+python db/tag_recruits.py --date 2026-03-14  # 특정 수집일만
+```
+
+### 5. 디스코드 봇 실행
 
 ```bash
 python -m discord_bot.bot
 ```
 
-### 5. systemd 자동화 (Linux)
+### 6. cron 자동화
 
-`systemd.txt` 파일을 참고하여 크롤러와 봇을 서비스로 등록합니다.
+```bash
+# 매일 06시 크롤링 + LLM 태깅
+0 6 * * * cd /path/to/job_search_bot && python main.py
+```
 
 ---
 
@@ -163,4 +236,10 @@ python tests/test_search.py
 
 # 스냅샷 갱신 (extract_filters 수정 후 기준선 재설정)
 python tests/test_search.py --update-snapshot
+
+# 검색 품질 평가
+python tests/evaluate.py                     # Hit@K, MRR, Zero-result rate
+python tests/evaluate_tagging.py             # 방안 3: 동의어 기반 Recall@K
+python tests/evaluate_subscription.py        # 방안 1: 구독 매칭 Before/After
+python tests/evaluate_reranker.py            # 방안 2: Precision@K Before/After
 ```

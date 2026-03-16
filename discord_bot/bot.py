@@ -3,7 +3,7 @@ import os
 import logging
 from discord.ext import tasks
 from dotenv import load_dotenv
-from discord_bot.llm import sql_search, extract_filters
+from discord_bot.llm import sql_search, sql_search_baseline, extract_filters
 from discord_bot.notifier import notify_subscribers
 from discord_bot.views import SubscriptionView, _describe_profile
 from db.base import ensure_tables
@@ -60,7 +60,8 @@ async def on_message(message):
             "`!구독해제 <번호>` — 특정 키워드 구독 해제 (번호는 `!내구독` 참고)\n"
             "`!구독해제 전체` — 모든 키워드 구독 해제\n"
             "`!알림테스트` — 지금 즉시 알림 조건 확인 및 DM 발송\n"
-            "`!인사이트` — 현재 채용 시장 현황 (인기 스택, 지역 분포, 평균 연봉)\n\n"
+            "`!인사이트` — 현재 채용 시장 현황 (인기 스택, 지역 분포, 평균 연봉)\n"
+            "`!ab <쿼리>` — A(baseline) vs B(현재 방식) 결과 나란히 비교\n\n"
             "**🔍 공고 검색**\n"
             "명령어 없이 자연어로 입력하면 공고를 검색합니다.\n\n"
             "**검색 팁** — 공고 제목에 실제로 나오는 단어를 쓸수록 정확도가 높아집니다.\n"
@@ -164,6 +165,26 @@ async def on_message(message):
             "원하지 않는 항목은 **상관없음**으로 두세요.",
             view=view,
         )
+        return
+
+    # ── !ab A/B 비교 ──────────────────────────────────────
+    if content.startswith("!ab "):
+        query = content[4:].strip()
+        if not query:
+            await message.channel.send("`!ab 쿼리` 형식으로 입력하세요. 예) `!ab 백엔드 서울 정규직`")
+            return
+        await message.channel.send(f"🔬 **A/B 비교 중...** `{query}`")
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            result_a, result_b = await asyncio.gather(
+                loop.run_in_executor(None, lambda: sql_search_baseline(query, limit=5)),
+                loop.run_in_executor(None, lambda: sql_search(query, limit=5)),
+            )
+            await message.channel.send(f"**[A] Baseline** (SQL AND, 재순위 없음)\n\n{result_a}")
+            await message.channel.send(f"**[B] Current** (adaptive 확장 + 재순위)\n\n{result_b}")
+        except Exception as e:
+            await message.channel.send(f"오류 발생: {str(e)}")
         return
 
     # ── 일반 검색 쿼리 ────────────────────────────────────

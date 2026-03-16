@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import logging
 from dotenv import load_dotenv
 import os
-from sqlalchemy import create_engine, or_
+from sqlalchemy import create_engine, or_, and_
 from sqlalchemy.orm import sessionmaker, joinedload
 from typing import List, Optional
 
@@ -86,6 +86,7 @@ def search_recruits_by_filter(
     region: str = None,
     limit: int = 5,
     expanded_keywords: list = None,
+    use_tags: bool = True,
 ) -> List[RecruitOut]:
     today = date.today()
     session = SessionLocal()
@@ -113,18 +114,17 @@ def search_recruits_by_filter(
                 tokens = keyword.split()
                 if keyword_mode == 'and':
                     for token in tokens:
-                        q = q.filter(or_(
-                            Recruit.announcement_name.ilike(f"%{token}%"),
-                            Recruit.tags.any(Tag.name.ilike(f"%{token}%")),
-                        ))
+                        cond = Recruit.announcement_name.ilike(f"%{token}%")
+                        if use_tags:
+                            cond = or_(cond, Recruit.tags.any(Tag.name.ilike(f"%{token}%")))
+                        q = q.filter(cond)
                 else:  # 'or' 폴백
-                    q = q.filter(or_(*[
-                        or_(
-                            Recruit.announcement_name.ilike(f"%{token}%"),
-                            Recruit.tags.any(Tag.name.ilike(f"%{token}%")),
-                        )
-                        for token in tokens
-                    ]))
+                    name_conditions = [Recruit.announcement_name.ilike(f"%{token}%") for token in tokens]
+                    if use_tags:
+                        tag_conditions = [Recruit.tags.any(Tag.name.ilike(f"%{token}%")) for token in tokens]
+                        q = q.filter(or_(*name_conditions, *tag_conditions))
+                    else:
+                        q = q.filter(or_(*name_conditions))
             if min_deadline:
                 q = q.filter(Recruit.deadline >= min_deadline)
             if min_annual_salary:
@@ -147,8 +147,11 @@ def search_recruits_by_filter(
 
         results = _build_query('and').order_by(Recruit.id.desc()).limit(limit).all()
 
-        # AND 결과 없고 키워드가 여러 토큰이면 OR 폴백 (expanded_keywords 미사용 시만)
-        if not results and not expanded_keywords and keyword and len(keyword.split()) > 1:
+        # AND 결과 부족 시 OR 폴백 (expanded_keywords 미사용, 멀티토큰 키워드 한정)
+        # use_tags=True: 결과 3건 미만이면 폴백 (태그 AND 과적용으로 빈 결과 방지)
+        # use_tags=False: 결과 0건일 때만 폴백 (기존 동작 유지)
+        fallback_threshold = 3 if use_tags else 1
+        if len(results) < fallback_threshold and not expanded_keywords and keyword and len(keyword.split()) > 1:
             results = _build_query('or').order_by(Recruit.id.desc()).limit(limit).all()
 
         return [_to_recruit_out(r) for r in results]

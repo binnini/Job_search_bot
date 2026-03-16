@@ -11,16 +11,17 @@ from typing import Optional
 OLLAMA_URL = "http://192.168.219.114:11434/api/generate"
 MODEL = "exaone3.5:7.8b"
 
-PROMPT_TEMPLATE = """구직자가 '{keyword}' 직무로 채용 공고를 구독합니다.
-같은 직무를 다르게 표현한 동의어·기술 스택만 추가해줘. 상위 개념이나 관련 직무는 포함하지 마.
+PROMPT_TEMPLATE = """채용 검색 쿼리: '{keyword}'
+
+이 쿼리와 관련된 채용 공고 제목·태그에 나올 법한 키워드를 추출해줘.
+직무명, 기술 스택, 직종 동의어를 포함하고 지역·연봉·고용형태는 제외해.
 
 규칙:
 - 공백 없는 단어만 (화살표·설명 금지)
-- 원래 키워드 포함 5~8개
-- 쉼표 구분, 키워드만 출력
+- 5~10개, 쉼표 구분, 키워드만 출력
 
-나쁜 예 (너무 넓음): ML엔지니어, 데이터분석, AI, 소프트웨어개발
-좋은 예: ML엔지니어, MLOps, 머신러닝엔지니어, 딥러닝, PyTorch, TensorFlow, 모델배포
+예시) 쿼리: 'Spring Boot API 서버 개발자'
+출력: 백엔드,SpringBoot,Java,서버개발자,API서버,Kotlin,백엔드개발자,Spring
 
 키워드:"""
 

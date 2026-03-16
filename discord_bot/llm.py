@@ -151,6 +151,9 @@ def extract_filters(query: str) -> dict:
     return filters
 
 
+ADAPTIVE_THRESHOLD = 3  # AND 결과가 이 미만이면 LLM 확장 OR 매칭으로 fallback
+
+
 def sql_search(query, limit=5):
     from discord_bot.keyword_expander import expand_keyword
     from discord_bot.reranker import rerank
@@ -159,11 +162,7 @@ def sql_search(query, limit=5):
     keyword = filters.get('keyword')
     form_code = JobPreprocessor.parse_form(filters.get('form') or '')
 
-    # 방안 1: 키워드 확장 (keyword가 있을 때만)
-    expanded = expand_keyword(keyword) if keyword else None
-
-    # 확장 키워드로 후보를 넉넉하게 검색 (재순위 후 상위 limit건 반환)
-    candidate_limit = max(limit * 5, 50) if expanded else limit
+    # 1차: 일반 AND 매칭 (db/io.py 내부 OR fallback 포함)
     recruits = search_recruits_by_filter(
         keyword=keyword,
         min_deadline=filters.get('min_deadline'),
@@ -172,9 +171,23 @@ def sql_search(query, limit=5):
         max_experience=filters.get('max_experience'),
         form=form_code,
         region=filters.get('region'),
-        limit=candidate_limit,
-        expanded_keywords=expanded,
+        limit=max(limit * 5, 50),
     )
+
+    # 2차: 결과 부족 시 LLM 쿼리 확장 → OR 매칭 (어휘 불일치 해소)
+    if len(recruits) < ADAPTIVE_THRESHOLD and keyword:
+        expanded = expand_keyword(keyword)
+        recruits = search_recruits_by_filter(
+            keyword=keyword,
+            min_deadline=filters.get('min_deadline'),
+            min_annual_salary=filters.get('min_annual_salary'),
+            company_name=filters.get('company_name'),
+            max_experience=filters.get('max_experience'),
+            form=form_code,
+            region=filters.get('region'),
+            limit=max(limit * 5, 50),
+            expanded_keywords=expanded,
+        )
 
     if not recruits:
         return "조건에 맞는 채용 공고를 찾지 못했습니다."

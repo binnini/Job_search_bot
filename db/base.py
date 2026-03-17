@@ -217,9 +217,12 @@ def create_tables(conn, cursor):
         # 복합 인덱스: 가장 빈번한 필터 조합 (deadline 필수 + form/experience)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline_form ON recruits(deadline, form)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline_exp  ON recruits(deadline, experience)")
-        # 공고명 ILIKE 검색용 trigram 인덱스 (pg_trgm 필요)
+        # ILIKE 검색용 trigram 인덱스 (pg_trgm 필요)
         cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_name_trgm ON recruits USING gin(announcement_name gin_trgm_ops)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_name_trgm ON tags USING gin(name gin_trgm_ops)")
+        # 태그 → 공고 방향 JOIN 인덱스 (tag_id 단독 인덱스 없으면 recruit_tags 풀스캔 발생)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruit_tags_tag_id ON recruit_tags(tag_id)")
 
         logging.info("테이블 생성 완료")
     except Exception as e:

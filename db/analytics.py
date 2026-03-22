@@ -12,7 +12,7 @@ from datetime import date, timedelta
 from sqlalchemy import func, case
 
 from db.io import SessionLocal
-from db.models import Recruit, Tag, Region, Subregion, recruit_tags
+from db.models import Recruit, Tag, Region, Subregion, EmploymentType, recruit_tags
 
 
 def get_top_tags(limit: int = 10, valid_only: bool = True) -> list[dict]:
@@ -73,8 +73,7 @@ def get_regional_dist(top_n: int = 8) -> list[dict]:
     try:
         rows = (
             session.query(Region.name, func.count(Recruit.id).label("count"))
-            .join(Subregion, Subregion.region_id == Region.id)
-            .join(Recruit, Recruit.subregion_id == Subregion.id)
+            .join(Recruit, Recruit.region_id == Region.id)
             .filter(Recruit.deadline >= date.today())
             .group_by(Region.name)
             .order_by(func.count(Recruit.id).desc())

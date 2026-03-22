@@ -7,6 +7,12 @@ from pydantic import BaseModel, ConfigDict
 
 Base = declarative_base()
 
+class EmploymentType(Base):
+    __tablename__ = "employment_types"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    recruits = relationship("Recruit", back_populates="employment_type")
+
 recruit_tags = Table(
     "recruit_tags",
     Base.metadata,
@@ -41,8 +47,9 @@ class Recruit(Base):
     announcement_name = Column(String)
     experience = Column(Integer)
     education = Column(Integer)
-    form = Column(Integer)
+    form = Column(Integer, ForeignKey("employment_types.id"))
     subregion_id = Column(Integer, ForeignKey("subregions.id"))
+    region_id = Column(Integer, ForeignKey("regions.id"))
     annual_salary = Column(Integer)
     deadline = Column(Date)
     link = Column(String)
@@ -51,6 +58,8 @@ class Recruit(Base):
 
     company = relationship("Company", back_populates="recruits")
     subregion = relationship("Subregion", back_populates="recruits")
+    region = relationship("Region", foreign_keys=[region_id])
+    employment_type = relationship("EmploymentType", back_populates="recruits")
     tags = relationship("Tag", secondary=recruit_tags, back_populates="recruits")
 
 class Tag(Base):

@@ -1,5 +1,5 @@
 import pandas as pd
-from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, UserProfile, NotificationLog
+from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, UserProfile, NotificationLog, EmploymentType
 from .JobPreprocessor import JobPreprocessor
 from datetime import date, datetime, timedelta
 from dataclasses import dataclass
@@ -44,7 +44,7 @@ def _to_recruit_out(r: Recruit) -> RecruitOut:
         education=r.education,
         form=r.form,
         tags=[tag.name for tag in r.tags],
-        region_name=r.subregion.region.name if r.subregion and r.subregion.region else None,
+        region_name=r.region.name if r.region else None,
     )
 
 
@@ -60,7 +60,7 @@ def read_recruitOut(limit: int = 10000, order_desc: bool = False) -> List[Recrui
             session.query(Recruit)
             .options(
                 joinedload(Recruit.company),
-                joinedload(Recruit.subregion).joinedload(Subregion.region)
+                joinedload(Recruit.region),
             )
             .filter(Recruit.deadline >= today)
         )
@@ -96,7 +96,7 @@ def search_recruits_by_filter(
                 session.query(Recruit)
                 .options(
                     joinedload(Recruit.company),
-                    joinedload(Recruit.subregion).joinedload(Subregion.region),
+                    joinedload(Recruit.region),
                     joinedload(Recruit.tags),
                 )
                 .filter(Recruit.deadline >= today)
@@ -139,8 +139,7 @@ def search_recruits_by_filter(
                 q = q.filter(Recruit.form == form)
             if region:
                 q = (
-                    q.join(Recruit.subregion)
-                    .join(Subregion.region)
+                    q.join(Recruit.region)
                     .filter(Region.name.ilike(f"%{region}%"))
                 )
             return q
@@ -166,7 +165,7 @@ def read_recruits_by_ids(recruit_ids: List[int]) -> List[RecruitOut]:
             session.query(Recruit)
             .options(
                 joinedload(Recruit.company),
-                joinedload(Recruit.subregion).joinedload(Subregion.region)
+                joinedload(Recruit.region),
             )
             .filter(Recruit.id.in_(recruit_ids))
             .all()
@@ -185,7 +184,7 @@ def get_new_recruits(hours: int = 24) -> List[RecruitOut]:
             session.query(Recruit)
             .options(
                 joinedload(Recruit.company),
-                joinedload(Recruit.subregion).joinedload(Subregion.region),
+                joinedload(Recruit.region),
                 joinedload(Recruit.tags),
             )
             .filter(Recruit.created_at >= since)

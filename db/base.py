@@ -77,6 +77,20 @@ def create_tables(conn, cursor):
     try:
         logging.info("테이블 생성 시작")
 
+        # 고용형태 차원 테이블
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS employment_types (
+            id INTEGER PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL
+        );
+        """)
+        cursor.executemany("""
+            INSERT INTO employment_types (id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING
+        """, [
+            (1,'정규직'),(2,'계약직'),(3,'인턴'),(4,'파견직'),(5,'프리랜서'),
+            (6,'위촉직'),(7,'도급'),(8,'연수생'),(9,'병역특례'),(10,'아르바이트'),
+        ])
+
         # 지역 대분류
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS regions (
@@ -111,8 +125,9 @@ def create_tables(conn, cursor):
             announcement_name TEXT,
             experience INTEGER,
             education INTEGER,
-            form INTEGER,
+            form INTEGER REFERENCES employment_types(id),
             subregion_id INTEGER REFERENCES subregions(id),
+            region_id INTEGER REFERENCES regions(id),
             annual_salary INTEGER,
             deadline DATE,
             link TEXT,
@@ -141,6 +156,32 @@ def create_tables(conn, cursor):
         cursor.execute("""
         ALTER TABLE recruits
         ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()
+        """)
+
+        # recruits.region_id 마이그레이션 (기존 테이블 대응)
+        cursor.execute("""
+        ALTER TABLE recruits
+        ADD COLUMN IF NOT EXISTS region_id INTEGER REFERENCES regions(id)
+        """)
+
+        # region_id 역방향 채우기: 기존 공고의 subregion → region
+        cursor.execute("""
+        UPDATE recruits r
+        SET region_id = s.region_id
+        FROM subregions s
+        WHERE r.subregion_id = s.id AND r.region_id IS NULL
+        """)
+
+        # recruits.form FK 마이그레이션 (기존 테이블 대응)
+        cursor.execute("""
+        DO $$ BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'fk_recruits_form'
+            ) THEN
+                ALTER TABLE recruits ADD CONSTRAINT fk_recruits_form
+                FOREIGN KEY (form) REFERENCES employment_types(id);
+            END IF;
+        END $$;
         """)
 
         # 알림 발송 이력
@@ -214,6 +255,7 @@ def create_tables(conn, cursor):
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_form        ON recruits(form)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_experience  ON recruits(experience)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_salary      ON recruits(annual_salary)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_region_id   ON recruits(region_id)")
         # 복합 인덱스: 가장 빈번한 필터 조합 (deadline 필수 + form/experience)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline_form ON recruits(deadline, form)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline_exp  ON recruits(deadline, experience)")
@@ -457,8 +499,10 @@ def _jobkorea_write(
     # 2. 지역 ID 확보
     if region and isinstance(region, tuple) and len(region) == 2 and region[1]:
         region_name, subregion_name = region
+        region_id = _ensure_region_and_get_id(cursor, region_name)
         subregion_id = _ensure_subregion_and_get_id(cursor, region_name, subregion_name)
     else:
+        region_id = None
         subregion_id = None
 
     # 3. recruits 테이블에 삽입
@@ -470,10 +514,11 @@ def _jobkorea_write(
             education,
             form,
             subregion_id,
+            region_id,
             annual_salary,
             deadline,
             link
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (company_id, announcement_name, deadline) DO NOTHING
         RETURNING id
     """, (
@@ -483,6 +528,7 @@ def _jobkorea_write(
         education,
         form,
         subregion_id,
+        region_id,
         annual_salary,
         deadline,
         link

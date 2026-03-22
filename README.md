@@ -7,15 +7,15 @@
 ![Ollama](https://img.shields.io/badge/Ollama-EXAONE_3.5_7.8B-black?logo=ollama&logoColor=white)
 
 잡코리아 채용 공고를 매일 자동 수집하고, 디스코드에서 자연어로 검색하거나 관심 조건을 구독해두면 신규 공고를 DM으로 받을 수 있는 봇입니다.
-LLM(EXAONE 3.5 7.8B)을 활용한 시맨틱 태깅, 키워드 확장, 재순위 기능으로 검색 품질을 높였습니다.
+LLM(EXAONE 3.5 7.8B)을 활용한 시맨틱 태깅, 키워드 확장, 재순위를 적용하고 TREC-style 평가 프레임워크로 효과를 정량 측정했습니다.
 
 ---
 
 ## 주요 기능
 
 - **자연어 검색** — `서울 백엔드 정규직 신입 공고` 형태의 구어체 쿼리를 정규식으로 파싱해 SQL WHERE 절로 변환
-- **LLM 키워드 확장** — 검색 키워드를 동의어·기술 스택으로 자동 확장하여 recall 향상 (`프론트 엔지니어` → `프론트엔드`, `React`, `Vue` 등)
-- **LLM 재순위** — 검색 후보를 관련도 순으로 재정렬하여 precision 향상
+- **LLM 키워드 확장** — 검색 키워드를 동의어·기술 스택으로 확장 (`프론트 엔지니어` → `프론트엔드`, `React`, `Vue` 등), TREC 평가 결과 유의미한 품질 변화 없음
+- **LLM 재순위** — 검색 후보를 관련도 순으로 재정렬, TREC 평가 결과 유의미한 품질 변화 없음
 - **LLM 시맨틱 태깅** — 크롤링 시 공고명 기반으로 직무·기술 태그를 자동 생성, 공고명에 없는 키워드로도 검색 가능
 - **채용 시장 분석** — 인기 기술 스택·평균 연봉·지역 분포를 `!인사이트` 명령어로 즉시 조회, 일별 스냅샷 저장
 - **구독 알림** — 키워드·지역·경력·연봉 조건을 등록해두면 24시간마다 신규 공고를 DM으로 수신
@@ -66,14 +66,14 @@ extract_filters()           정규식 기반 파싱
   { region: "서울", keyword: "프론트엔드", max_experience: 0 }
         │
         ▼
-expand_keyword()            EXAONE LLM 키워드 확장 (방안 1)
+expand_keyword()            EXAONE LLM 키워드 확장
   ["프론트엔드", "frontend", "React", "Vue", "UI개발", ...]
         │
         ▼
 search_recruits_by_filter() OR 매칭으로 후보 50건 검색
         │
         ▼
-rerank()                    EXAONE LLM 관련도 재순위 (방안 2)
+rerank()                    EXAONE LLM 관련도 재순위
         │
         ▼
 Discord 메시지 반환 (상위 5건)
@@ -88,13 +88,13 @@ Discord 메시지 반환 (상위 5건)
 get_new_recruits()          최근 24시간 신규 공고 조회
         │
         ▼
-expand_keyword()            구독 키워드 LLM 확장 (방안 1)
+expand_keyword()            구독 키워드 LLM 확장
         │
         ▼
 _match()                    확장 키워드 OR 매칭 + 프로필 필터
         │
         ▼
-rerank()                    LLM 관련도 재순위 (방안 2)
+rerank()                    LLM 관련도 재순위
         │
         ▼
 DM 발송 (상위 10건)

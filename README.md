@@ -246,9 +246,11 @@ python tests/test_search.py
 # 스냅샷 갱신 (extract_filters 수정 후 기준선 재설정)
 python tests/test_search.py --update-snapshot
 
-# 검색 품질 평가
-python tests/evaluate.py                     # Hit@K, MRR, Zero-result rate
-python tests/evaluate_tagging.py             # 방안 3: 동의어 기반 Recall@K
-python tests/evaluate_subscription.py        # 방안 1: 구독 매칭 Before/After
-python tests/evaluate_reranker.py            # 방안 2: Precision@K Before/After
+# 관련도 판정 구조 검증 (DB 불필요 — 43개 쿼리 × 판정 데이터 형식·일관성)
+python -m pytest tests/test_relevance_judgments.py::TestJudgmentStructure -v
+
+# 관련도 판정 검색 품질 테스트 (실 DB 필요 — 판정 데이터 × 실제 검색 결과 비교)
+python -m pytest tests/test_relevance_judgments.py --db -v
 ```
+
+판정 데이터(`tests/write_judgments.py`)는 A·B·C·D 4개 시리즈 43개 쿼리에 대해 수동으로 작성한 공고별 관련도(0~3점) 기록입니다. D 시리즈 및 일부 B 시리즈는 검색 시스템의 한계를 확인하는 엣지케이스입니다.

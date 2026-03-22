@@ -84,7 +84,7 @@ def generate_quality_report() -> str:
                 COUNT(*) AS total,
                 COUNT(annual_salary) AS has_salary,
                 COUNT(experience) AS has_experience,
-                COUNT(subregion_id) AS has_region,
+                COUNT(region_id) AS has_region,
                 COUNT(form) AS has_form,
                 COUNT(education) AS has_education
             FROM recruits

@@ -24,15 +24,6 @@ class Region(Base):
     __tablename__ = "regions"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
-    subregions = relationship("Subregion", back_populates="region", cascade="all, delete")
-
-class Subregion(Base):
-    __tablename__ = "subregions"
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    region_id = Column(Integer, ForeignKey("regions.id", ondelete="CASCADE"))
-    region = relationship("Region", back_populates="subregions")
-    recruits = relationship("Recruit", back_populates="subregion")
 
 class Company(Base):
     __tablename__ = "companies"
@@ -48,8 +39,8 @@ class Recruit(Base):
     experience = Column(Integer)
     education = Column(Integer)
     form = Column(Integer, ForeignKey("employment_types.id"))
-    subregion_id = Column(Integer, ForeignKey("subregions.id"))
     region_id = Column(Integer, ForeignKey("regions.id"))
+    subregion_name = Column(String)
     annual_salary = Column(Integer)
     deadline = Column(Date)
     link = Column(String)
@@ -57,7 +48,6 @@ class Recruit(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     company = relationship("Company", back_populates="recruits")
-    subregion = relationship("Subregion", back_populates="recruits")
     region = relationship("Region", foreign_keys=[region_id])
     employment_type = relationship("EmploymentType", back_populates="recruits")
     tags = relationship("Tag", secondary=recruit_tags, back_populates="recruits")

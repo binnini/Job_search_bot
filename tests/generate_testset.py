@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db.io import read_recruitOut
+from db.io import read_recruitOut, get_employment_type_name
 from db.JobPreprocessor import JobPreprocessor
 
 OLLAMA_URL = "http://192.168.219.114:11434/api/generate"
@@ -32,7 +32,7 @@ def build_prompt(recruit) -> str:
     salary = JobPreprocessor.stringify_salary(recruit.annual_salary)
     experience = JobPreprocessor.stringify_experience(recruit.experience)
     region = recruit.region_name or "미상"
-    form = JobPreprocessor.stringify_form(recruit.form)
+    form = get_employment_type_name(recruit.form) or "기타"
 
     return f"""다음은 채용 공고 정보입니다.
 

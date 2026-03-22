@@ -3,7 +3,7 @@ from collections import defaultdict
 from db.io import (
     get_all_subscriptions, get_all_user_profiles, get_new_recruits,
     SubscriptionOut, ProfileOut, RecruitOut,
-    get_notified_recruit_ids, save_notification_log,
+    get_notified_recruit_ids, save_notification_log, get_employment_type_name,
 )
 from db.JobPreprocessor import JobPreprocessor
 
@@ -55,7 +55,7 @@ def format_recruit(i: int, r: RecruitOut, include_education: bool = False) -> st
     if include_education:
         lines.append(f"- 학력: {JobPreprocessor.stringify_education(r.education) or '무관'}")
     lines += [
-        f"- 형태: {JobPreprocessor.stringify_form(r.form) or '정보 없음'}",
+        f"- 형태: {get_employment_type_name(r.form) or '정보 없음'}",
         f"- 연봉: {JobPreprocessor.stringify_salary(r.annual_salary) or '협의'}",
         f"- 마감일: {JobPreprocessor.stringify_deadline(r.deadline)}",
         f"🔗 {r.link}",

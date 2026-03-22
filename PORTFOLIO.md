@@ -29,7 +29,7 @@ Ingestion             Scraper (Playwright)      매일 06:00 잡코리아 동적
 Data Cleansing        JobPreprocessor           경력·연봉·고용형태·지역 정규화 및 이상값 검증
 Data Enrichment       EXAONE 3.5 7.8B (Ollama)  데이터 수집 시 기존 공고명 및 크롤링 태그 기반 추가 시맨틱 태그 자동 보강
                                                 데이터 검색 시 사용자 쿼리 키워드 확장 · 결과 후보 재순위
-Data Saving           PostgreSQL                공고·태그·기업·지역 정규화 5개 테이블, trigram 인덱스
+Data Saving           PostgreSQL                공고·태그·기업·지역 정규화 4개 테이블, trigram 인덱스
 Data Analysis         Market Snapshot           유효 공고(마감일 내) 기준 인기 태그·연봉·지역·경력 분포 일별 집계
 Service               Discord Bot               자연어 검색, 구독 등록, 24h 주기 신규 공고 DM 알림
 ## Database Schema
@@ -44,11 +44,6 @@ erDiagram
         int id PK
         string name
     }
-    subregions {
-        int id PK
-        string name
-        int region_id FK
-    }
     companies {
         int id PK
         string company_name
@@ -60,8 +55,8 @@ erDiagram
         int experience
         int education
         int form FK
-        int subregion_id FK
         int region_id FK
+        string subregion_name
         int annual_salary
         date deadline
         string link
@@ -119,9 +114,7 @@ erDiagram
 
     recruits }o--|| employment_types : "form (고용형태 차원)"
     recruits }o--|| companies : "company_id"
-    recruits }o--o| subregions : "subregion_id"
-    recruits }o--o| regions : "region_id (트리거 자동 동기화)"
-    subregions }o--|| regions : "region_id"
+    recruits }o--o| regions : "region_id"
     recruits ||--o{ recruit_tags : ""
     tags ||--o{ recruit_tags : ""
     recruits ||--o{ notification_log : "recruit_id"

@@ -68,7 +68,7 @@ def tag_recruit_batch(recruit_ids: list[int]) -> dict:
     """
     from sqlalchemy.orm import joinedload
     from db.io import SessionLocal
-    from db.models import Recruit, Tag, Subregion, Region
+    from db.models import Recruit, Tag, Region
 
     session = SessionLocal()
     stats = {"tagged": 0, "skipped": 0, "failed": 0}

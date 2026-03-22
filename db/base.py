@@ -57,7 +57,6 @@ def reset_tables():
         cursor.execute("DROP TABLE IF EXISTS recruit_tags;")
         cursor.execute("DROP TABLE IF EXISTS tags;")
         cursor.execute("DROP TABLE IF EXISTS recruits;")
-        cursor.execute("DROP TABLE IF EXISTS subregions;")
         cursor.execute("DROP TABLE IF EXISTS regions;")
         cursor.execute("DROP TABLE IF EXISTS companies;")
 
@@ -99,16 +98,6 @@ def create_tables(conn, cursor):
         );
         """)
 
-        # 지역 소분류
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS subregions (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            region_id INTEGER REFERENCES regions(id) ON DELETE CASCADE,
-            UNIQUE(name, region_id)
-        );
-        """)
-
         # 기업
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS companies (
@@ -126,8 +115,8 @@ def create_tables(conn, cursor):
             experience INTEGER,
             education INTEGER,
             form INTEGER REFERENCES employment_types(id),
-            subregion_id INTEGER REFERENCES subregions(id),
             region_id INTEGER REFERENCES regions(id),
+            subregion_name TEXT,
             annual_salary INTEGER,
             deadline DATE,
             link TEXT,
@@ -164,41 +153,29 @@ def create_tables(conn, cursor):
         ADD COLUMN IF NOT EXISTS region_id INTEGER REFERENCES regions(id)
         """)
 
-        # region_id 자동 동기화 트리거: subregion_id 변경 시 region_id를 항상 일치시킴
+        # subregion 비정규화 마이그레이션: subregion_name 컬럼 추가 및 subregions 테이블 제거
         cursor.execute("""
-        CREATE OR REPLACE FUNCTION sync_region_id()
-        RETURNS TRIGGER AS $$
-        BEGIN
-            IF NEW.subregion_id IS NOT NULL THEN
-                SELECT region_id INTO NEW.region_id
-                FROM subregions
-                WHERE id = NEW.subregion_id;
-            ELSE
-                NEW.region_id := NULL;
-            END IF;
-            RETURN NEW;
-        END;
-        $$ LANGUAGE plpgsql;
+        ALTER TABLE recruits
+        ADD COLUMN IF NOT EXISTS subregion_name TEXT
         """)
+        # 기존 데이터 backfill: subregion_id → subregion_name
         cursor.execute("""
         DO $$ BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sync_region_id'
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'recruits' AND column_name = 'subregion_id'
             ) THEN
-                CREATE TRIGGER trg_sync_region_id
-                BEFORE INSERT OR UPDATE OF subregion_id ON recruits
-                FOR EACH ROW EXECUTE FUNCTION sync_region_id();
+                UPDATE recruits r
+                SET subregion_name = s.name
+                FROM subregions s
+                WHERE r.subregion_id = s.id AND r.subregion_name IS NULL;
             END IF;
         END $$;
         """)
-
-        # region_id 역방향 채우기: 트리거 이전에 삽입된 기존 공고 대응
-        cursor.execute("""
-        UPDATE recruits r
-        SET region_id = s.region_id
-        FROM subregions s
-        WHERE r.subregion_id = s.id AND r.region_id IS NULL
-        """)
+        cursor.execute("DROP TRIGGER IF EXISTS trg_sync_region_id ON recruits")
+        cursor.execute("DROP FUNCTION IF EXISTS sync_region_id()")
+        cursor.execute("ALTER TABLE recruits DROP COLUMN IF EXISTS subregion_id")
+        cursor.execute("DROP TABLE IF EXISTS subregions CASCADE")
 
         # recruits.form FK 마이그레이션 (기존 테이블 대응)
         cursor.execute("""
@@ -309,7 +286,7 @@ def clear_recruit_data():
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            TRUNCATE TABLE recruit_tags, recruits, tags, companies, subregions, regions
+            TRUNCATE TABLE recruit_tags, recruits, tags, companies, regions
             RESTART IDENTITY CASCADE
         """)
         conn.commit()
@@ -487,25 +464,6 @@ def _ensure_region_and_get_id(cursor, region_name):
         return cursor.fetchone()[0]
 
 
-def _ensure_subregion_and_get_id(cursor, region_name, subregion_name):
-    region_id = _ensure_region_and_get_id(cursor, region_name)
-
-    cursor.execute("""
-        INSERT INTO subregions (name, region_id)
-        VALUES (%s, %s)
-        ON CONFLICT (name, region_id) DO NOTHING
-        RETURNING id
-    """, (subregion_name, region_id))
-    result = cursor.fetchone()
-    if result:
-        return result[0]
-    else:
-        cursor.execute("""
-            SELECT id FROM subregions
-            WHERE name = %s AND region_id = %s
-        """, (subregion_name, region_id))
-        return cursor.fetchone()[0]
-
 
 def _jobkorea_write(
     conn,
@@ -524,12 +482,13 @@ def _jobkorea_write(
     # 1. 회사 ID 확보
     company_id = _ensure_company_and_get_id(cursor, company_name)
 
-    # 2. 지역 ID 확보 (region_id는 트리거가 subregion_id로부터 자동 세팅)
-    if region and isinstance(region, tuple) and len(region) == 2 and region[1]:
-        region_name, subregion_name = region
-        subregion_id = _ensure_subregion_and_get_id(cursor, region_name, subregion_name)
-    else:
-        subregion_id = None
+    # 2. 지역 ID 확보 및 subregion_name 추출
+    region_id = None
+    subregion_name = None
+    if region and isinstance(region, tuple):
+        region_name, sub = region
+        region_id = _ensure_region_and_get_id(cursor, region_name)
+        subregion_name = sub
 
     # 3. recruits 테이블에 삽입
     cursor.execute("""
@@ -539,11 +498,12 @@ def _jobkorea_write(
             experience,
             education,
             form,
-            subregion_id,
+            region_id,
+            subregion_name,
             annual_salary,
             deadline,
             link
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (company_id, announcement_name, deadline) DO NOTHING
         RETURNING id
     """, (
@@ -552,7 +512,8 @@ def _jobkorea_write(
         experience,
         education,
         form,
-        subregion_id,
+        region_id,
+        subregion_name,
         annual_salary,
         deadline,
         link

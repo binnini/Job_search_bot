@@ -1,6 +1,7 @@
 import discord
 from db.io import (
     save_subscription, save_user_profile, get_subscriptions, MAX_SUBSCRIPTIONS_PER_USER,
+    get_employment_type_name,
 )
 from db.JobPreprocessor import JobPreprocessor
 
@@ -10,7 +11,7 @@ def _describe_profile(profile) -> str:
         return "지역: 상관없음\n고용형태: 상관없음\n최대경력: 상관없음\n최소연봉: 상관없음"
     return (
         f"지역: {profile.region or '상관없음'}\n"
-        f"고용형태: {JobPreprocessor.stringify_form(profile.form) if profile.form is not None else '상관없음'}\n"
+        f"고용형태: {get_employment_type_name(profile.form) or '상관없음'}\n"
         f"최대경력: {JobPreprocessor.stringify_experience(profile.max_experience) if profile.max_experience is not None else '상관없음'}\n"
         f"최소연봉: {JobPreprocessor.stringify_salary(profile.min_annual_salary) if profile.min_annual_salary is not None else '상관없음'}"
     )

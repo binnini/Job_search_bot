@@ -16,7 +16,7 @@ load_dotenv(override=True)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from discord_bot.llm import extract_filters
-from db.io import search_recruits_by_filter, RecruitOut
+from db.io import search_recruits_by_filter, RecruitOut, get_employment_type_name
 from db.JobPreprocessor import JobPreprocessor
 from discord_bot.reranker import rerank
 from discord_bot.keyword_expander import expand_keyword
@@ -49,7 +49,7 @@ def _to_dict(r: RecruitOut):
         "announcement_name": r.announcement_name,
         "company_name": r.company_name,
         "region": r.region_name or "미상",
-        "form": JobPreprocessor.stringify_form(r.form),
+        "form": get_employment_type_name(r.form),
         "experience": JobPreprocessor.stringify_experience(r.experience),
         "salary": JobPreprocessor.stringify_salary(r.annual_salary),
     }

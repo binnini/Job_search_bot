@@ -12,7 +12,7 @@ from datetime import date, timedelta
 from sqlalchemy import func, case
 
 from db.io import SessionLocal
-from db.models import Recruit, Tag, Region, Subregion, EmploymentType, recruit_tags
+from db.models import Recruit, Tag, Region, EmploymentType, recruit_tags
 
 
 def get_top_tags(limit: int = 10, valid_only: bool = True) -> list[dict]:

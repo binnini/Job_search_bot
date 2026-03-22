@@ -126,9 +126,7 @@ DM 발송 (상위 10건)
 erDiagram
     recruits }o--|| employment_types : "고용형태 차원"
     recruits }o--|| companies : "기업"
-    recruits }o--o| subregions : "지역 소분류"
-    recruits }o--o| regions : "지역 대분류 (트리거 동기화)"
-    subregions }o--|| regions : ""
+    recruits }o--o| regions : "지역 대분류"
     recruits ||--o{ recruit_tags : ""
     tags ||--o{ recruit_tags : "기술 태그"
     recruits ||--o{ notification_log : "알림 이력"

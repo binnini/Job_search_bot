@@ -1,5 +1,5 @@
 import pandas as pd
-from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, UserProfile, NotificationLog, EmploymentType
+from .models import Recruit, RecruitOut, Tag, Company, Region, UserSubscription, UserProfile, NotificationLog, EmploymentType
 from .JobPreprocessor import JobPreprocessor
 from datetime import date, datetime, timedelta
 from dataclasses import dataclass
@@ -458,23 +458,33 @@ def read_recruit_tags():
 def read_regions():
     return _read_table_as_dataframe("regions")
 
-def read_subregions():
-    return _read_table_as_dataframe("subregions")
-
 def read_full_region_names():
-    """regions + subregions JOIN → full_region_name(예: 서울 강남구) DataFrame 반환."""
+    """recruits 기반 지역 목록 → full_region_name(예: 서울 강남구) DataFrame 반환."""
     query = """
-        SELECT
-            subregions.id AS subregion_id,
-            regions.name AS region,
-            subregions.name AS subregion,
-            regions.name || ' ' || subregions.name AS full_region_name
-        FROM subregions
-        JOIN regions ON subregions.region_id = regions.id
+        SELECT DISTINCT
+            r.region_id,
+            reg.name AS region,
+            r.subregion_name AS subregion,
+            reg.name || ' ' || r.subregion_name AS full_region_name
+        FROM recruits r
+        JOIN regions reg ON r.region_id = reg.id
+        WHERE r.subregion_name IS NOT NULL
         ORDER BY region, subregion
     """
     with engine.connect() as conn:
         return pd.read_sql_query(query, conn)
+
+
+def get_employment_type_name(form_id: int) -> Optional[str]:
+    """employment_types 테이블에서 고용형태 이름을 조회."""
+    if form_id is None:
+        return None
+    session = SessionLocal()
+    try:
+        et = session.get(EmploymentType, form_id)
+        return et.name if et else None
+    finally:
+        session.close()
 
 
 def delete_expired_jobs():

@@ -317,23 +317,3 @@ class JobPreprocessor:
         }
         return level_map.get(value, "기타")
 
-    @staticmethod
-    def stringify_form(value: int) -> str:
-        """
-        숫자형 고용형태를 문자열로 변환
-        """
-        form_map = {
-            1: '정규직',
-            2: '계약직',
-            3: '인턴',
-            4: '파견직',
-            5: '프리랜서',
-            6: '위촉직',
-            7: '도급',
-            8: '연수생',
-            9: '병역특례',
-            10: '아르바이트'
-        }
-        if value is None:
-            return "기타"
-        return form_map.get(value, "기타")

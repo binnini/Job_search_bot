@@ -32,6 +32,101 @@ Data Enrichment       EXAONE 3.5 7.8B (Ollama)  데이터 수집 시 기존 공�
 Data Saving           PostgreSQL                공고·태그·기업·지역 정규화 5개 테이블, trigram 인덱스
 Data Analysis         Market Snapshot           유효 공고(마감일 내) 기준 인기 태그·연봉·지역·경력 분포 일별 집계
 Service               Discord Bot               자연어 검색, 구독 등록, 24h 주기 신규 공고 DM 알림
+## Database Schema
+
+```mermaid
+erDiagram
+    employment_types {
+        int id PK
+        string name
+    }
+    regions {
+        int id PK
+        string name
+    }
+    subregions {
+        int id PK
+        string name
+        int region_id FK
+    }
+    companies {
+        int id PK
+        string company_name
+    }
+    recruits {
+        int id PK
+        int company_id FK
+        string announcement_name
+        int experience
+        int education
+        int form FK
+        int subregion_id FK
+        int region_id FK
+        int annual_salary
+        date deadline
+        string link
+        timestamp created_at
+    }
+    tags {
+        int id PK
+        string name
+    }
+    recruit_tags {
+        int recruit_id FK
+        int tag_id FK
+    }
+    notification_log {
+        int id PK
+        string discord_user_id
+        int recruit_id FK
+        timestamp notified_at
+    }
+    user_profiles {
+        string discord_user_id PK
+        string region
+        int form
+        int max_experience
+        int min_annual_salary
+        timestamp updated_at
+    }
+    user_subscriptions {
+        int id PK
+        string discord_user_id
+        string keyword
+        timestamp created_at
+    }
+    job_market_daily {
+        date date PK
+        int total_valid_jobs
+        int new_jobs
+        int avg_salary
+        json top_tags
+        json region_dist
+        json experience_dist
+        timestamp created_at
+    }
+    data_quality_log {
+        int id PK
+        string batch_id
+        string company_name
+        string announcement_name
+        string field
+        string rule
+        string original_value
+        string parsed_value
+        timestamp created_at
+    }
+
+    recruits }o--|| employment_types : "form (고용형태 차원)"
+    recruits }o--|| companies : "company_id"
+    recruits }o--o| subregions : "subregion_id"
+    recruits }o--o| regions : "region_id (트리거 자동 동기화)"
+    subregions }o--|| regions : "region_id"
+    recruits ||--o{ recruit_tags : ""
+    tags ||--o{ recruit_tags : ""
+    recruits ||--o{ notification_log : "recruit_id"
+```
+
 ## Implemented
 
 Implemented

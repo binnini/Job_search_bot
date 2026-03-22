@@ -132,20 +132,98 @@ DM 발송 (상위 10건)
 
 ---
 
-## 데이터 품질
+## 데이터베이스 스키마
 
-수집 시점에 이상값을 차단하고, 위반 건은 `data_quality_log` 테이블에 이력을 남깁니다.
+```mermaid
+erDiagram
+    employment_types {
+        int id PK
+        string name
+    }
+    regions {
+        int id PK
+        string name
+    }
+    subregions {
+        int id PK
+        string name
+        int region_id FK
+    }
+    companies {
+        int id PK
+        string company_name
+    }
+    recruits {
+        int id PK
+        int company_id FK
+        string announcement_name
+        int experience
+        int education
+        int form FK
+        int subregion_id FK
+        int region_id FK
+        int annual_salary
+        date deadline
+        string link
+        timestamp created_at
+    }
+    tags {
+        int id PK
+        string name
+    }
+    recruit_tags {
+        int recruit_id FK
+        int tag_id FK
+    }
+    notification_log {
+        int id PK
+        string discord_user_id
+        int recruit_id FK
+        timestamp notified_at
+    }
+    user_profiles {
+        string discord_user_id PK
+        string region
+        int form
+        int max_experience
+        int min_annual_salary
+        timestamp updated_at
+    }
+    user_subscriptions {
+        int id PK
+        string discord_user_id
+        string keyword
+        timestamp created_at
+    }
+    job_market_daily {
+        date date PK
+        int total_valid_jobs
+        int new_jobs
+        int avg_salary
+        json top_tags
+        json region_dist
+        json experience_dist
+        timestamp created_at
+    }
+    data_quality_log {
+        int id PK
+        string batch_id
+        string field
+        string rule
+        string original_value
+        string parsed_value
+        timestamp created_at
+    }
 
-```python
-SALARY_MIN, SALARY_MAX = 600, 50000  # 만원
-
-def validate_salary(value):
-    if value < SALARY_MIN: return None, "below_minimum"
-    if value > SALARY_MAX: return None, "above_maximum"
-    return value, None
+    recruits }o--|| employment_types : "form (고용형태 차원)"
+    recruits }o--|| companies : "company_id"
+    recruits }o--o| subregions : "subregion_id"
+    recruits }o--o| regions : "region_id (트리거 자동 동기화)"
+    subregions }o--|| regions : "region_id"
+    recruits ||--o{ recruit_tags : ""
+    tags ||--o{ recruit_tags : ""
+    recruits ||--o{ notification_log : "recruit_id"
 ```
-
-이상값 정제 전후 연봉 평균: **5,067만원 → 4,026만원**
 
 ---
 

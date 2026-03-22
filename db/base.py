@@ -164,7 +164,35 @@ def create_tables(conn, cursor):
         ADD COLUMN IF NOT EXISTS region_id INTEGER REFERENCES regions(id)
         """)
 
-        # region_id 역방향 채우기: 기존 공고의 subregion → region
+        # region_id 자동 동기화 트리거: subregion_id 변경 시 region_id를 항상 일치시킴
+        cursor.execute("""
+        CREATE OR REPLACE FUNCTION sync_region_id()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            IF NEW.subregion_id IS NOT NULL THEN
+                SELECT region_id INTO NEW.region_id
+                FROM subregions
+                WHERE id = NEW.subregion_id;
+            ELSE
+                NEW.region_id := NULL;
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        """)
+        cursor.execute("""
+        DO $$ BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sync_region_id'
+            ) THEN
+                CREATE TRIGGER trg_sync_region_id
+                BEFORE INSERT OR UPDATE OF subregion_id ON recruits
+                FOR EACH ROW EXECUTE FUNCTION sync_region_id();
+            END IF;
+        END $$;
+        """)
+
+        # region_id 역방향 채우기: 트리거 이전에 삽입된 기존 공고 대응
         cursor.execute("""
         UPDATE recruits r
         SET region_id = s.region_id
@@ -496,13 +524,11 @@ def _jobkorea_write(
     # 1. 회사 ID 확보
     company_id = _ensure_company_and_get_id(cursor, company_name)
 
-    # 2. 지역 ID 확보
+    # 2. 지역 ID 확보 (region_id는 트리거가 subregion_id로부터 자동 세팅)
     if region and isinstance(region, tuple) and len(region) == 2 and region[1]:
         region_name, subregion_name = region
-        region_id = _ensure_region_and_get_id(cursor, region_name)
         subregion_id = _ensure_subregion_and_get_id(cursor, region_name, subregion_name)
     else:
-        region_id = None
         subregion_id = None
 
     # 3. recruits 테이블에 삽입
@@ -514,11 +540,10 @@ def _jobkorea_write(
             education,
             form,
             subregion_id,
-            region_id,
             annual_salary,
             deadline,
             link
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (company_id, announcement_name, deadline) DO NOTHING
         RETURNING id
     """, (
@@ -528,7 +553,6 @@ def _jobkorea_write(
         education,
         form,
         subregion_id,
-        region_id,
         annual_salary,
         deadline,
         link

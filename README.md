@@ -136,94 +136,17 @@ DM 발송 (상위 10건)
 
 ```mermaid
 erDiagram
-    employment_types {
-        int id PK
-        string name
-    }
-    regions {
-        int id PK
-        string name
-    }
-    subregions {
-        int id PK
-        string name
-        int region_id FK
-    }
-    companies {
-        int id PK
-        string company_name
-    }
-    recruits {
-        int id PK
-        int company_id FK
-        string announcement_name
-        int experience
-        int education
-        int form FK
-        int subregion_id FK
-        int region_id FK
-        int annual_salary
-        date deadline
-        string link
-        timestamp created_at
-    }
-    tags {
-        int id PK
-        string name
-    }
-    recruit_tags {
-        int recruit_id FK
-        int tag_id FK
-    }
-    notification_log {
-        int id PK
-        string discord_user_id
-        int recruit_id FK
-        timestamp notified_at
-    }
-    user_profiles {
-        string discord_user_id PK
-        string region
-        int form
-        int max_experience
-        int min_annual_salary
-        timestamp updated_at
-    }
-    user_subscriptions {
-        int id PK
-        string discord_user_id
-        string keyword
-        timestamp created_at
-    }
-    job_market_daily {
-        date date PK
-        int total_valid_jobs
-        int new_jobs
-        int avg_salary
-        json top_tags
-        json region_dist
-        json experience_dist
-        timestamp created_at
-    }
-    data_quality_log {
-        int id PK
-        string batch_id
-        string field
-        string rule
-        string original_value
-        string parsed_value
-        timestamp created_at
-    }
-
-    recruits }o--|| employment_types : "form (고용형태 차원)"
-    recruits }o--|| companies : "company_id"
-    recruits }o--o| subregions : "subregion_id"
-    recruits }o--o| regions : "region_id (트리거 자동 동기화)"
-    subregions }o--|| regions : "region_id"
+    recruits }o--|| employment_types : "고용형태 차원"
+    recruits }o--|| companies : "기업"
+    recruits }o--o| subregions : "지역 소분류"
+    recruits }o--o| regions : "지역 대분류 (트리거 동기화)"
+    subregions }o--|| regions : ""
     recruits ||--o{ recruit_tags : ""
-    tags ||--o{ recruit_tags : ""
-    recruits ||--o{ notification_log : "recruit_id"
+    tags ||--o{ recruit_tags : "기술 태그"
+    recruits ||--o{ notification_log : "알림 이력"
 ```
+
+> 테이블·컬럼 상세는 [PORTFOLIO.md](PORTFOLIO.md#database-schema)를 참고하세요.
 
 ---
 

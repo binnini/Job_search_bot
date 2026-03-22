@@ -30,19 +30,25 @@ LLM(EXAONE 3.5 7.8B)을 활용한 시맨틱 태깅, 키워드 확장, 재순위 
 [잡코리아]
     │  Playwright 크롤링 (cron, 매일 06시)
     ▼
-[EXAONE 3.5 7.8B via Ollama]  ← 시맨틱 태그 자동 생성 (방안 3)
+[EXAONE 3.5 7.8B via Ollama]  ← 시맨틱 태그 자동 생성
     │
     ▼
 [PostgreSQL]
-  ├─ recruits            공고 (경력/형태/연봉/마감일)
+  ── Fact ──────────────────────────────────────────────
+  ├─ recruits            공고 (경력/고용형태/연봉/마감일)
+  ── Dimension ─────────────────────────────────────────
+  ├─ employment_types    고용형태 차원 (정규직/계약직/인턴 등 10종)
   ├─ companies           기업명
+  ├─ regions             지역 대분류
+  ├─ subregions          지역 소분류 (구·군)
   ├─ tags                기술스택 + LLM 생성 시맨틱 태그
-  ├─ regions/subregions  지역 대·소분류
+  ── User ──────────────────────────────────────────────
   ├─ user_profiles       사용자 공통 필터 (지역/형태/경력/연봉)
   ├─ user_subscriptions  키워드 구독
   ├─ notification_log    알림 발송 이력
-  ├─ data_quality_log    파싱 이상값 이력
-  └─ job_market_daily    날짜별 채용 시장 스냅샷 (분석 레이어)
+  ── Analytics & Quality ───────────────────────────────
+  ├─ job_market_daily    날짜별 채용 시장 스냅샷
+  └─ data_quality_log    파싱 이상값 이력
     │
     └─ [Discord Bot]
          ├─ 자연어 검색  →  extract_filters() → 키워드 확장 → SQL → 재순위
@@ -119,6 +125,8 @@ DM 발송 (상위 10건)
 | EXAONE 3.5 7.8B (gemma3:4b, qwen2.5:7b 비교 후 선정) | 한국어 태깅 품질 우수, 지시 준수 안정적 |
 | AND → OR 폴백 | 복합 키워드 검색 시 결과 0건 방지 |
 | pg_trgm GIN 인덱스 | `announcement_name ILIKE` 검색을 Seq Scan → Bitmap Index Scan으로 개선 |
+| `employment_types` 차원 테이블 분리 | `recruits.form` 정수 코드를 명시적 차원 테이블로 분리해 고용형태 기반 다차원 집계 용이 |
+| `recruits.region_id` 직접 참조 + 트리거 | 지역 필터 조인을 2단계(subregion→region)에서 1단계로 단순화, 트리거(`trg_sync_region_id`)로 `subregion_id` 변경 시 `region_id` 자동 동기화해 정합성 보장 |
 
 > 의사결정 과정의 상세 배경과 트러블슈팅은 [TROUBLE_SHOOT.md](TROUBLE_SHOOT.md)에 기록되어 있습니다.
 

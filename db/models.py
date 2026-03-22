@@ -1,11 +1,17 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Table, JSON
 from sqlalchemy.orm import relationship
 from typing import List, Optional
 from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict
 
 Base = declarative_base()
+
+class EmploymentType(Base):
+    __tablename__ = "employment_types"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    recruits = relationship("Recruit", back_populates="employment_type")
 
 recruit_tags = Table(
     "recruit_tags",
@@ -41,8 +47,9 @@ class Recruit(Base):
     announcement_name = Column(String)
     experience = Column(Integer)
     education = Column(Integer)
-    form = Column(Integer)
+    form = Column(Integer, ForeignKey("employment_types.id"))
     subregion_id = Column(Integer, ForeignKey("subregions.id"))
+    region_id = Column(Integer, ForeignKey("regions.id"))
     annual_salary = Column(Integer)
     deadline = Column(Date)
     link = Column(String)
@@ -51,6 +58,8 @@ class Recruit(Base):
 
     company = relationship("Company", back_populates="recruits")
     subregion = relationship("Subregion", back_populates="recruits")
+    region = relationship("Region", foreign_keys=[region_id])
+    employment_type = relationship("EmploymentType", back_populates="recruits")
     tags = relationship("Tag", secondary=recruit_tags, back_populates="recruits")
 
 class Tag(Base):
@@ -85,6 +94,19 @@ class UserSubscription(Base):
     id = Column(Integer, primary_key=True)
     discord_user_id = Column(String, nullable=False)
     keyword = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class JobMarketDaily(Base):
+    """날짜별 채용 시장 스냅샷 — 분석 레이어."""
+    __tablename__ = "job_market_daily"
+    date = Column(Date, primary_key=True)
+    total_valid_jobs = Column(Integer)   # 마감 미도래 공고 수
+    new_jobs = Column(Integer)           # 당일 신규 수집 공고 수
+    avg_salary = Column(Integer)         # 유효 공고 평균 연봉 (만원)
+    top_tags = Column(JSON)              # 인기 태그 TOP 10 [{name, count}, ...]
+    region_dist = Column(JSON)           # 지역별 분포 [{region, count}, ...]
+    experience_dist = Column(JSON)       # 경력별 분포 [{label, count}, ...]
     created_at = Column(DateTime, default=datetime.now)
 
 

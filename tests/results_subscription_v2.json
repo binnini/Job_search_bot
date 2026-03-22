@@ -1,0 +1,559 @@
+{
+  "summary": {
+    "total_before": 78992,
+    "total_after": 102885
+  },
+  "results": [
+    {
+      "keyword": "백엔드",
+      "expanded": [
+        "백엔드",
+        "백엔드개발자",
+        "서버사이드개발",
+        "API개발자",
+        "풀스택조정",
+        "데이터베이스관리",
+        "자바스프링",
+        "파이썬프레임워크",
+        "RESTfulAPI",
+        "서버프로그래밍",
+        "클라우드플랫폼"
+      ],
+      "matched_before": 735,
+      "matched_after": 754,
+      "new_matches": 19,
+      "expansion_ratio": 1.03
+    },
+    {
+      "keyword": "프론트엔드",
+      "expanded": [
+        "프론트엔드",
+        "프론트엔드개발자",
+        "웹개발",
+        "UI개발",
+        "프론트엔드엔진니어",
+        "React",
+        "Vue",
+        "Angular",
+        "JavaScript",
+        "HTML5",
+        "CSS3"
+      ],
+      "matched_before": 501,
+      "matched_after": 1624,
+      "new_matches": 1123,
+      "expansion_ratio": 3.24
+    },
+    {
+      "keyword": "풀스택",
+      "expanded": [
+        "풀스택",
+        "프론트엔드개발자",
+        "백엔드개발자",
+        "웹개발자",
+        "프론트엔드엔드개발자",
+        "React",
+        "Angular",
+        "Vue",
+        "Node.js",
+        "Express.js"
+      ],
+      "matched_before": 229,
+      "matched_after": 1267,
+      "new_matches": 1038,
+      "expansion_ratio": 5.53
+    },
+    {
+      "keyword": "데이터엔지니어",
+      "expanded": [
+        "데이터엔지니어",
+        "데이터사이언티스트",
+        "데이터분석가",
+        "통계엔지니어",
+        "ETL개발자",
+        "데이터아키텍트",
+        "데이터베이스엔지니어",
+        "데이터프로세서",
+        "SQL전문가",
+        "Pandas",
+        "NumPy",
+        "Hadoop",
+        "Spark"
+      ],
+      "matched_before": 28,
+      "matched_after": 69,
+      "new_matches": 41,
+      "expansion_ratio": 2.46
+    },
+    {
+      "keyword": "ML엔지니어",
+      "expanded": [
+        "ML엔지니어",
+        "머신러닝엔지니어",
+        "딥러닝엔지니어",
+        "TensorFlow",
+        "PyTorch",
+        "Scikit-learn",
+        "Keras",
+        "모델평가"
+      ],
+      "matched_before": 0,
+      "matched_after": 12,
+      "new_matches": 12,
+      "expansion_ratio": null
+    },
+    {
+      "keyword": "DevOps",
+      "expanded": [
+        "DevOps",
+        "DevOpsEngineer",
+        "CI/CD",
+        "InfrastructureasCode",
+        "Docker",
+        "Kubernetes",
+        "Ansible"
+      ],
+      "matched_before": 117,
+      "matched_after": 162,
+      "new_matches": 45,
+      "expansion_ratio": 1.38
+    },
+    {
+      "keyword": "안드로이드",
+      "expanded": [
+        "안드로이드",
+        "안드로이드개발",
+        "모바일앱개발",
+        "앱개발",
+        "자바개발",
+        "Kotlin개발",
+        "Android프레임워크",
+        "앱테스트 엔지니어"
+      ],
+      "matched_before": 429,
+      "matched_after": 2092,
+      "new_matches": 1663,
+      "expansion_ratio": 4.88
+    },
+    {
+      "keyword": "iOS",
+      "expanded": [
+        "iOS",
+        "iOS개발자",
+        "Swift개발자",
+        "Objective-C전문가",
+        "CocoaTouch전문가",
+        "SwiftUI개발자",
+        "앱빌드엔지니어",
+        "iOS테스팅엔지니어"
+      ],
+      "matched_before": 176,
+      "matched_after": 176,
+      "new_matches": 0,
+      "expansion_ratio": 1.0
+    },
+    {
+      "keyword": "게임개발",
+      "expanded": [
+        "게임개발",
+        "게임프로그래머",
+        "게임엔진개발",
+        "게임아트디렉터",
+        "게임레벨디자인",
+        "Unity",
+        "UnrealEngine",
+        "C#",
+        "JavaScript",
+        "ShaderProgramming"
+      ],
+      "matched_before": 386,
+      "matched_after": 1034,
+      "new_matches": 648,
+      "expansion_ratio": 2.68
+    },
+    {
+      "keyword": "보안",
+      "expanded": [
+        "보안",
+        "보안엔지니어",
+        "사이버보안전문가",
+        "정보보호",
+        "취약점분석",
+        "침입방지",
+        "암호화기술",
+        "보안감사",
+        "SIEM관리"
+      ],
+      "matched_before": 3730,
+      "matched_after": 3749,
+      "new_matches": 19,
+      "expansion_ratio": 1.01
+    },
+    {
+      "keyword": "UX디자인",
+      "expanded": [
+        "UX디자인",
+        "UX디자이너",
+        "사용자경험전문가",
+        "인터랙션디자이너",
+        "프로덕트디자이너",
+        "서비스디자이너",
+        "프로토타이핑전문가",
+        "사용자연구er"
+      ],
+      "matched_before": 45,
+      "matched_after": 73,
+      "new_matches": 28,
+      "expansion_ratio": 1.62
+    },
+    {
+      "keyword": "그래픽디자인",
+      "expanded": [
+        "그래픽디자인",
+        "그래픽디자이너",
+        "시각디자이너",
+        "UI/UX디자이너",
+        "디지털아트전문가",
+        "AdobeXD",
+        "Figma",
+        "Sketch",
+        "CorelDRAW",
+        "InDesign"
+      ],
+      "matched_before": 63,
+      "matched_after": 261,
+      "new_matches": 198,
+      "expansion_ratio": 4.14
+    },
+    {
+      "keyword": "영상편집",
+      "expanded": [
+        "영상편집",
+        "모션그래픽",
+        "비디오그래픽",
+        "포스트프로덕션",
+        "AdobePremiere",
+        "FinalCutPro",
+        "DaVinciResolve"
+      ],
+      "matched_before": 356,
+      "matched_after": 1027,
+      "new_matches": 671,
+      "expansion_ratio": 2.88
+    },
+    {
+      "keyword": "3D모델링",
+      "expanded": [
+        "3D모델링",
+        "CAD디자인",
+        "디지털모델링",
+        "프로젝션디자인",
+        "3D렌더링",
+        "Blender",
+        "Maya",
+        "ZBrush",
+        "3dsMax"
+      ],
+      "matched_before": 58,
+      "matched_after": 74,
+      "new_matches": 16,
+      "expansion_ratio": 1.28
+    },
+    {
+      "keyword": "데이터분석",
+      "expanded": [
+        "데이터분석",
+        "데이터사이언티스트",
+        "통계분석가",
+        "비즈니스데이터분석가",
+        "데이터쿼리전문가",
+        "SQL프로그래머",
+        "Pandas",
+        "NumPy",
+        "Tableau",
+        "PowerBI"
+      ],
+      "matched_before": 6677,
+      "matched_after": 6687,
+      "new_matches": 10,
+      "expansion_ratio": 1.0
+    },
+    {
+      "keyword": "데이터사이언스",
+      "expanded": [
+        "데이터사이언스",
+        "통계분석",
+        "머신러닝엔지니어",
+        "데이터분석가",
+        "R프로그래머",
+        "Python전문가",
+        "데이터사이언스스페셜리스트",
+        "SQL전문가",
+        "데이터비주얼라이저",
+        "데이터마이닝",
+        "SAS사용자"
+      ],
+      "matched_before": 1,
+      "matched_after": 836,
+      "new_matches": 835,
+      "expansion_ratio": 836.0
+    },
+    {
+      "keyword": "서비스기획",
+      "expanded": [
+        "서비스기획",
+        "서비스전략",
+        "사용자경험(UX)디자이너",
+        "프로세스개선전문가",
+        "디지털컨설턴트",
+        "고객경험관리",
+        "솔루션기획",
+        "기술전략가",
+        "프로젝트매니저",
+        "비즈니스분석가",
+        "요구사항분석가",
+        "IT프로젝트코디네이터",
+        "시스템통합전문가"
+      ],
+      "matched_before": 1291,
+      "matched_after": 3424,
+      "new_matches": 2133,
+      "expansion_ratio": 2.65
+    },
+    {
+      "keyword": "디지털마케팅",
+      "expanded": [
+        "디지털마케팅",
+        "콘텐츠마케팅",
+        "소셜미디어매니저",
+        "SEO전문가",
+        "이메일마케팅",
+        "캠페인매니저",
+        "마케팅자동화",
+        "GoogleAnalytics",
+        "SEMrush",
+        "Hootsuite",
+        "AdobeAnalytics"
+      ],
+      "matched_before": 3374,
+      "matched_after": 3395,
+      "new_matches": 21,
+      "expansion_ratio": 1.01
+    },
+    {
+      "keyword": "콘텐츠마케팅",
+      "expanded": [
+        "콘텐츠마케팅",
+        "콘텐츠크리에이터",
+        "콘텐츠전략가",
+        "디지털마케터",
+        "소셜미디어전문가",
+        "블로그관리자",
+        "SEO전문가",
+        "콘텐츠분석가",
+        "이메일마케팅전문가",
+        "마케팅콘텐츠작가"
+      ],
+      "matched_before": 30,
+      "matched_after": 44,
+      "new_matches": 14,
+      "expansion_ratio": 1.47
+    },
+    {
+      "keyword": "SNS마케팅",
+      "expanded": [
+        "SNS마케팅",
+        "디지털마케팅",
+        "소셜미디어매니저",
+        "콘텐츠크리에이터",
+        "인플루언서매니지먼트",
+        "아날리틱스",
+        "Hootsuite",
+        "Buffer",
+        "SproutSocial"
+      ],
+      "matched_before": 6629,
+      "matched_after": 7374,
+      "new_matches": 745,
+      "expansion_ratio": 1.11
+    },
+    {
+      "keyword": "회계",
+      "expanded": [
+        "회계",
+        "회계감사",
+        "재무분석",
+        "세무보고",
+        "재무관리",
+        "재무제표분석",
+        "회계소프트웨어",
+        "QuickBooks",
+        "Xero",
+        "SAP_FICO"
+      ],
+      "matched_before": 6031,
+      "matched_after": 6270,
+      "new_matches": 239,
+      "expansion_ratio": 1.04
+    },
+    {
+      "keyword": "인사",
+      "expanded": [
+        "인사",
+        "인사관리",
+        "인재채용",
+        "채용프로세스",
+        "인재확보",
+        "HR솔루션",
+        "인재평가",
+        "ATS전문가"
+      ],
+      "matched_before": 3114,
+      "matched_after": 3278,
+      "new_matches": 164,
+      "expansion_ratio": 1.05
+    },
+    {
+      "keyword": "영업",
+      "expanded": [
+        "영업",
+        "영업전문가",
+        "고객관계관리",
+        "매출증진",
+        "솔루션제안",
+        "리드헌팅",
+        "협상전문가",
+        "비즈니스개발"
+      ],
+      "matched_before": 25210,
+      "matched_after": 25213,
+      "new_matches": 3,
+      "expansion_ratio": 1.0
+    },
+    {
+      "keyword": "간호사",
+      "expanded": [
+        "간호사",
+        "RN",
+        "보건관리자",
+        "환자케어전문가",
+        "의료지원전문가",
+        "응급케어코디네이터",
+        "의료기술지원",
+        "의료행정조력자"
+      ],
+      "matched_before": 978,
+      "matched_after": 1278,
+      "new_matches": 300,
+      "expansion_ratio": 1.31
+    },
+    {
+      "keyword": "요양보호사",
+      "expanded": [
+        "요양보호사",
+        "요양전문간호사",
+        "돌봄전문가",
+        "노인케어로지스트",
+        "실버케어코디네이터",
+        "노인요양관리자",
+        "환자돌봄파트너",
+        "정서지원전문가"
+      ],
+      "matched_before": 200,
+      "matched_after": 200,
+      "new_matches": 0,
+      "expansion_ratio": 1.0
+    },
+    {
+      "keyword": "품질관리",
+      "expanded": [
+        "품질관리",
+        "품질보증",
+        "QC엔지니어",
+        "품질분석",
+        "제조품질관리",
+        "SPC분석",
+        "통계품질관리",
+        "품질시험",
+        "LeanSixSigma"
+      ],
+      "matched_before": 2494,
+      "matched_after": 5087,
+      "new_matches": 2593,
+      "expansion_ratio": 2.04
+    },
+    {
+      "keyword": "생산관리",
+      "expanded": [
+        "생산관리",
+        "생산운영",
+        "제조공정관리",
+        "품질보증",
+        "공정최적화",
+        "ERP시스템",
+        "MES구축",
+        "자동화프로그래밍",
+        "재고관리",
+        "생산계획ning",
+        "제조기술분석"
+      ],
+      "matched_before": 4341,
+      "matched_after": 14874,
+      "new_matches": 10533,
+      "expansion_ratio": 3.43
+    },
+    {
+      "keyword": "금융",
+      "expanded": [
+        "금융",
+        "금융분석가",
+        "재무분석가",
+        "투자분석가",
+        "리스크매니저",
+        "금융컨설턴트",
+        "알고리즘트레이더",
+        "금융기술전문가"
+      ],
+      "matched_before": 3780,
+      "matched_after": 3780,
+      "new_matches": 0,
+      "expansion_ratio": 1.0
+    },
+    {
+      "keyword": "보험영업",
+      "expanded": [
+        "보험영업",
+        "고객관계관리",
+        "리스크분석",
+        "보험상담",
+        "보험판매",
+        "보험컨설팅",
+        "손해사정",
+        "보험마케팅",
+        "보험심사",
+        "보험설계"
+      ],
+      "matched_before": 3118,
+      "matched_after": 3890,
+      "new_matches": 772,
+      "expansion_ratio": 1.25
+    },
+    {
+      "keyword": "강사",
+      "expanded": [
+        "강사",
+        "교육전문가",
+        "커리큘럼개발자",
+        "온라인강사",
+        "교육콘텐츠제작자",
+        "학습설계자",
+        "교육기술전문가",
+        "웨비나주관자"
+      ],
+      "matched_before": 4871,
+      "matched_after": 4881,
+      "new_matches": 10,
+      "expansion_ratio": 1.0
+    }
+  ]
+}

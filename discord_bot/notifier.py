@@ -8,13 +8,26 @@ from db.io import (
 from db.JobPreprocessor import JobPreprocessor
 
 
-def _match(recruit: RecruitOut, keyword: str, profile: ProfileOut) -> bool:
-    """공고가 (키워드 + 프로필 필터) 조건에 부합하는지 검사."""
+def _match(recruit: RecruitOut, keyword: str, profile: ProfileOut,
+           expanded_keywords: list[str] = None) -> bool:
+    """공고가 (키워드 + 프로필 필터) 조건에 부합하는지 검사.
+
+    expanded_keywords: 방안1 키워드 확장 시 전달. 하나라도 매칭되면 통과 (OR 매칭).
+    미전달 시 원본 keyword AND 매칭 (기존 방식).
+    """
     if keyword:
-        tokens = keyword.split()
         all_text = (recruit.announcement_name or '') + ' ' + ' '.join(recruit.tags)
-        if not all(token.lower() in all_text.lower() for token in tokens):
-            return False
+        all_text_lower = all_text.lower()
+
+        if expanded_keywords:
+            # OR 매칭: 확장 키워드 중 하나라도 포함되면 통과
+            if not any(k.lower() in all_text_lower for k in expanded_keywords):
+                return False
+        else:
+            # AND 매칭: 원본 키워드의 모든 토큰 포함 (기존 방식)
+            tokens = keyword.split()
+            if not all(token.lower() in all_text_lower for token in tokens):
+                return False
 
     if profile:
         if profile.region and recruit.region_name and profile.region not in recruit.region_name:
@@ -64,9 +77,20 @@ async def notify_subscribers(client, skip_dedup: bool = False):
     profiles = get_all_user_profiles()
     logging.info(f"알림 처리 시작: 신규 공고 {len(new_recruits)}건, 구독 {len(subscriptions)}개")
 
+    from discord_bot.keyword_expander import expand_keyword
+
     user_keywords: dict = defaultdict(list)
     for sub in subscriptions:
         user_keywords[sub.discord_user_id].append(sub.keyword)
+
+    # 키워드 확장 (중복 제거 후 1회만 호출) — 스레드 풀에서 실행해 이벤트 루프 블로킹 방지
+    import asyncio
+    loop = asyncio.get_event_loop()
+    all_keywords = list({kw for kws in user_keywords.values() for kw in kws if kw})
+    expanded_map = {}
+    for kw in all_keywords:
+        expanded_map[kw] = await loop.run_in_executor(None, expand_keyword, kw)
+    logging.info(f"키워드 확장 완료: {len(expanded_map)}개")
 
     for discord_user_id, keywords in user_keywords.items():
         profile = profiles.get(discord_user_id)
@@ -74,8 +98,9 @@ async def notify_subscribers(client, skip_dedup: bool = False):
         seen_ids: set = set()
         matched: list = []
         for keyword in keywords:
+            expanded = expanded_map.get(keyword)
             for r in new_recruits:
-                if r.id not in seen_ids and _match(r, keyword, profile):
+                if r.id not in seen_ids and _match(r, keyword, profile, expanded_keywords=expanded):
                     seen_ids.add(r.id)
                     matched.append(r)
 
@@ -90,6 +115,11 @@ async def notify_subscribers(client, skip_dedup: bool = False):
             if not to_notify:
                 logging.info(f"user={discord_user_id}: 매칭 {len(matched)}건 모두 이미 발송됨, 생략")
                 continue
+
+        # 방안 2: 발송 전 키워드별 관련도 재순위 — 스레드 풀에서 실행
+        if keywords:
+            from discord_bot.reranker import rerank
+            to_notify = await loop.run_in_executor(None, rerank, keywords[0], to_notify)
 
         try:
             user = await client.fetch_user(int(discord_user_id))

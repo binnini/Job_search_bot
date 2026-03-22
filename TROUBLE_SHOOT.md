@@ -740,6 +740,427 @@ result_lines = [format_recruit(i, r, include_education=True) for i, r in enumera
 
 ---
 
+## 18. Discord 봇 검색 응답이 '잠시 기다려 주세요'에서 멈추는 문제
+
+### Problem
+
+Discord 봇이 정상 실행 중임에도 불구하고 검색 명령을 입력하면
+'잠시 기다려 주세요' 메시지 이후 응답이 오지 않는 현상이 발생했습니다.
+
+로그를 확인하니 다음 에러가 반복되었습니다.
+
+```
+psycopg2.OperationalError: SSL connection has been closed unexpectedly
+```
+
+SQLAlchemy Connection Pool이 유지하는 idle 연결이 PostgreSQL 서버 쪽에서
+타임아웃으로 끊겼는데, Pool은 이를 모르고 끊어진 연결을 재사용하다 실패하는 구조였습니다.
+
+### Solution
+
+`create_engine`에 `pool_pre_ping=True` 옵션을 추가했습니다.
+
+```python
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+```
+
+`pool_pre_ping=True`는 Pool에서 연결을 꺼낼 때 `SELECT 1`로 연결 상태를 먼저 확인합니다.
+끊어진 연결이 감지되면 자동으로 재연결 후 반환하여 `OperationalError`를 방지합니다.
+
+---
+
+## 19. 기존 CSV 적재 시 마감일이 2026년으로 밀리는 문제
+
+### Problem
+
+2025년 수집된 CSV 파일을 2026년에 DB에 적재하면,
+`~07/20` 같은 마감일이 `parse_deadline()` 내부에서 오늘 날짜(2026-03-15) 기준으로 파싱되어
+모두 2026~2027년으로 설정되는 문제가 있었습니다.
+
+```python
+# parse_deadline 내부 — today를 기준으로 연도 결정
+year = today.year  # 2026
+deadline = datetime(year, month, day).date()
+if deadline < today:  # 이미 지났으면 내년으로 보정
+    deadline = datetime(year + 1, month, day).date()  # 2027년!
+```
+
+`jobkorea_data_2025-07-15.csv`에 담긴 마감일 `~07/20`은
+실제로는 2025-07-20이지만 2026-07-20으로 적재되어 데이터가 왜곡되었습니다.
+
+### Solution
+
+`csv_to_db()`에 `today` 파라미터를 추가하고,
+파일명(`jobkorea_data_2025-07-15.csv`)에서 날짜를 정규식으로 추출하여 기준 날짜로 사용했습니다.
+
+```python
+def csv_to_db(csv_path, today=None):
+    if today is None:
+        m = re.search(r'(\d{4})-(\d{2})-(\d{2})', csv_path)
+        if m:
+            today = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    ...
+    deadline=JobPreprocessor.parse_deadline(row['마감일'], today=today)
+```
+
+파일명에 날짜가 없는 경우(`jobkorea_data.csv`)는 현재 날짜로 fallback됩니다.
+
+---
+
+## 20. Ollama 원격 접속 불가 — localhost 바인딩 문제
+
+### Problem
+
+동일 로컬 네트워크 내 Mac에서 Ollama를 실행하고
+다른 서버(192.168.219.155)에서 `http://192.168.219.114:11434`로 접속 시
+`Connection refused` 오류가 발생했습니다.
+
+### Solution
+
+Ollama는 기본적으로 `127.0.0.1`(localhost)에만 바인딩되어 같은 기기에서만 접속 가능합니다.
+같은 LAN의 다른 기기도 Mac 입장에서는 외부 접속이므로, `0.0.0.0` 바인딩이 필요합니다.
+
+```bash
+OLLAMA_HOST=0.0.0.0 ollama serve
+```
+
+`0.0.0.0`으로 바인딩하면 인터넷이 아닌 LAN 내 모든 기기에서 접속 가능합니다.
+
+---
+
+## 21. LLM 태깅 출력 형식 불일치 — 긴 구 형태 태그
+
+### Problem
+
+EXAONE을 이용한 공고 태깅 시, 기존 DB의 단어형 태그(`백엔드`, `Java`, `SNS마케팅`)와 달리
+LLM이 구 형태의 긴 태그를 생성하는 문제가 발생했습니다.
+
+```
+기존 태그: 소프트웨어개발, C++, Linux
+LLM 생성:  자동차 전장 소프트웨어 개발, Linux 기반 시스템, C++ 전문가
+```
+
+공백이 포함된 태그는 `tag.name ILIKE '%token%'` 검색에서 부분 매칭이 불안정하고,
+기존 태그와 형식이 달라 검색 노이즈가 증가합니다.
+
+또한 기업명, 지역, 연봉 같은 메타 정보가 태그에 포함되는 케이스도 있었습니다.
+
+```
+gemma3 생성: 방산, 품질관리, ISO, 신입, 듀라텍  ← 기업명 포함
+```
+
+### Solution
+
+프롬프트에 명확한 형식 규칙과 나쁜 예시를 추가했습니다.
+
+```
+규칙:
+- 공백 없는 단어만 (예: 백엔드, Java, 데이터분석, UI디자인)
+- 직무/기술/산업 도메인만 포함 (지역·연봉·고용형태·기업명 제외)
+- 5~8개, 쉼표 구분, 태그만 출력
+
+예시 출력: 백엔드, Java, Spring, REST API, MySQL, 서버개발
+```
+
+출력 파싱 시에도 첫 줄만 사용하고, 공백이 2개 이상 포함된 태그를 필터링하여 방어적으로 처리합니다.
+
+```python
+tags = [t for t in tags if 1 <= len(t) <= 20 and t.count(" ") <= 1]
+```
+
+---
+
+## 22. LLM 구독 키워드 과확장 — Recall 증가와 Precision 저하
+
+### Problem
+
+방안 1(구독 키워드 확장) 구현 시 EXAONE이 원래 직무와 관련 없는 상위 개념 키워드까지 포함하여
+매칭 공고가 폭발적으로 증가하는 과확장 문제가 발생했습니다.
+
+```
+ML엔지니어 → 머신러닝, AI, 데이터분석, 소프트웨어개발  ← 너무 넓음
+서비스기획  → Before 1,291건 → After 10,691건  ← 9,400건 과확장
+```
+
+첫 번째 프롬프트가 "관련된 키워드"를 요청했기 때문에
+LLM이 같은 직무의 동의어가 아니라 연관 직무 전체를 포함했습니다.
+
+### Solution
+
+프롬프트를 "동의어·기술 스택만 추가, 상위 개념 금지"로 강화하고 나쁜 예시를 추가했습니다.
+
+```
+규칙: 같은 직무를 다르게 표현한 동의어·기술 스택만 추가해줘.
+      상위 개념이나 관련 직무는 포함하지 마.
+
+나쁜 예 (너무 넓음): ML엔지니어, 데이터분석, AI, 소프트웨어개발
+좋은 예: ML엔지니어, MLOps, 머신러닝엔지니어, 딥러닝, PyTorch, TensorFlow
+```
+
+개선 결과: 전체 매칭 증가율 **86% → 30%** 로 과확장이 억제되었으며,
+방안 2(재순위)와 함께 사용하여 Recall 증가 + Precision 보완 구조로 운영합니다.
+
+---
+
+## 23. 방안 3 Before/After 평가 결과가 동일 — 테스트셋 편향
+
+### Problem
+
+LLM 시맨틱 태깅(방안 3) 적용 전후 검색 품질을 `evaluate.py`로 측정했을 때
+Before와 After가 완전히 동일한 결과가 나왔습니다.
+
+```
+Before: Hit@5=52.0%  Hit@10=58.0%  MRR=0.3941
+After:  Hit@5=52.0%  Hit@10=58.0%  MRR=0.3941  ← 변화 없음
+```
+
+원인은 `testset.json` 생성 방식에 있었습니다.
+`generate_testset.py`는 LLM에게 "이 공고를 찾을 쿼리를 만들어줘"라고 요청하는 역방향 생성 방식이었습니다.
+
+LLM은 공고명에서 직접 단어를 가져와 쿼리를 생성하기 때문에,
+생성된 쿼리는 이미 공고명에 포함된 단어를 사용합니다.
+공고명으로 검색하면 이미 찾히므로, LLM 태그를 추가해도 결과가 바뀌지 않았습니다.
+
+```
+공고명: "백엔드 API 개발자 채용 (Spring Boot)"
+생성 쿼리: "서울 백엔드 Spring Boot 신입"  ← 공고명 단어 그대로 사용
+→ 태그 없이도 공고명 ILIKE로 이미 검색됨
+```
+
+태그 기반 검색의 진짜 가치는 공고명에 없는 표현으로 검색할 때 나타납니다.
+
+### Solution
+
+공고명에 나타나지 않는 동의어·기술 스택 쿼리로 측정하는 `evaluate_tagging.py`를 별도로 작성했습니다.
+
+```python
+# 공고명에 없지만 의미적으로 연관된 동의어 쿼리 쌍 정의
+SYNONYM_PAIRS = [
+    ("프론트엔드", ["frontend", "React", "Vue", "UI개발"]),
+    ("데이터분석", ["analytics", "SQL", "Python", "tableau"]),
+    ("UX디자인",   ["사용자경험", "UI/UX", "Figma"]),
+    ...
+]
+```
+
+Before(공고명만 매칭)와 After(공고명+LLM 태그 매칭)를 비교한 결과:
+
+```
+평균 Recall@10 Before: 37.8%
+평균 Recall@10 After:  88.9%  (+51.1%p)
+```
+
+프론트엔드(+80%p), 데이터분석(+100%p), UX디자인(+90%p), 임베디드(+90%p) 에서 특히 큰 효과가 확인되었습니다.
+
+---
+
+## 24. `_jobkorea_write()`가 recruit_id를 반환하지 않아 LLM 태깅 불가
+
+### Problem
+
+`batch_to_db()`에 LLM 태깅 연동을 추가하려면 신규 삽입된 공고의 ID 목록이 필요했습니다.
+그러나 `_jobkorea_write()`는 반환값이 없었고, 중복 공고(`ON CONFLICT DO NOTHING`)와 신규 삽입을 구분할 방법도 없었습니다.
+
+```python
+def _jobkorea_write(conn, cursor, row, today):
+    cursor.execute("INSERT INTO recruits ... ON CONFLICT DO NOTHING")
+    conn.commit()
+    # return 없음 → 신규 삽입 여부 알 수 없음
+```
+
+태깅 대상을 알 수 없어 전체 배치를 다시 쿼리하거나, 중복 공고도 불필요하게 재태깅하는 문제가 발생할 수 있었습니다.
+
+### Solution
+
+`_jobkorea_write()`에서 신규 삽입 시 `recruit_id`를 반환하고, 중복(CONFLICT)이면 `None`을 반환하도록 변경했습니다.
+
+```python
+def _jobkorea_write(conn, cursor, row, today):
+    recruit_id = None
+    # ... INSERT 로직 ...
+    cursor.execute("INSERT INTO recruits ... ON CONFLICT DO NOTHING RETURNING id")
+    row_result = cursor.fetchone()
+    if row_result:
+        recruit_id = row_result[0]  # 신규 삽입 시 ID 반환
+    conn.commit()
+    return recruit_id  # 중복이면 None
+```
+
+`batch_to_db()`에서 `None`이 아닌 ID만 모아 태깅 대상으로 전달합니다.
+
+```python
+new_recruit_ids = [rid for rid in insert_results if rid is not None]
+if use_llm_tagging and new_recruit_ids:
+    tag_recruit_batch(new_recruit_ids)
+```
+
+---
+
+## 25. cron 크롤링 시 LLM 태깅이 자동 실행되지 않는 문제
+
+### Problem
+
+`db/tagger.py`와 `batch_to_db(use_llm_tagging=True)` 연동을 구현했지만,
+실제 크롤링을 담당하는 `crawling/scraper.py`에서는 기본값(`False`)으로 호출하고 있었습니다.
+
+```python
+# scraper.py (변경 전)
+batch_to_db(data_batch)  # use_llm_tagging 기본값=False → 태깅 안 됨
+```
+
+매일 06시 cron이 `main.py → scraper.py → batch_to_db()` 경로로 실행되므로,
+소급 태깅 스크립트(`db/tag_recruits.py`)를 별도로 수동 실행하지 않는 한 신규 공고에 태그가 붙지 않았습니다.
+
+### Solution
+
+`scraper.py`의 모든 `batch_to_db()` 호출에 `use_llm_tagging=True`를 명시했습니다.
+
+```python
+# 5페이지마다 중간 저장
+batch_to_db(data_batch, use_llm_tagging=True)
+
+# 크롤링 종료 후 잔여 배치
+batch_to_db(data_batch, use_llm_tagging=True)
+```
+
+Ollama 서버(Mac)가 꺼져 있는 경우 `call_tagger()` 내부에서 예외를 잡아 `failed` 카운트만 증가하고 크롤링/저장 자체는 정상 진행됩니다.
+
+---
+
+## 26. LLM 동기 호출이 Discord 이벤트 루프를 블로킹하는 문제
+
+### Problem
+
+`notify_subscribers()` 실행 시 `expand_keyword()`와 `rerank()`가 Ollama에 동기 HTTP 요청을 보내는데,
+이 함수들이 Discord의 async 이벤트 루프 위에서 직접 호출되어 루프 전체가 블로킹되었습니다.
+
+```python
+# 문제: async 함수 내에서 동기 blocking 호출
+async def notify_subscribers(client):
+    expanded_map = {kw: expand_keyword(kw) for kw in all_keywords}  # blocking!
+    to_notify = rerank(keywords[0], to_notify)                       # blocking!
+```
+
+결과적으로 notify 태스크가 실행되는 동안 `!인사이트`, `!도움` 등 모든 명령어가 응답하지 않았습니다.
+Ollama 서버 응답이 느리거나 연결이 끊기는 경우 수십 초~수 분간 봇이 멈춘 것처럼 보였습니다.
+
+### Solution
+
+`loop.run_in_executor(None, ...)` 로 동기 함수를 스레드 풀에서 실행하여 이벤트 루프를 해방했습니다.
+
+```python
+import asyncio
+loop = asyncio.get_event_loop()
+
+# 키워드 확장 — 스레드에서 실행
+for kw in all_keywords:
+    expanded_map[kw] = await loop.run_in_executor(None, expand_keyword, kw)
+
+# 재순위 — 스레드에서 실행
+to_notify = await loop.run_in_executor(None, rerank, keywords[0], to_notify)
+```
+
+`bot.py`의 `sql_search()` 호출도 동일하게 적용했습니다.
+
+```python
+response = await loop.run_in_executor(None, lambda: sql_search(content, limit=5))
+```
+
+LLM 호출 중에도 다른 명령어가 정상 응답합니다.
+
+---
+
+## 27. 직접 검색에 LLM 기능이 적용되지 않는 문제
+
+### Problem
+
+방안 1(키워드 확장)·방안 2(재순위)를 구독 알림 흐름에만 적용했고,
+사용자가 Discord에서 직접 자연어로 검색할 때는 적용되지 않았습니다.
+
+```
+# 구독 알림: 키워드 확장 + 재순위 ✅
+# 직접 검색: extract_filters() → SQL → 결과 반환  ← LLM 없음 ❌
+```
+
+"프론트 엔지니어"처럼 공고명과 다른 표현으로 검색 시 확장 없이 정확한 매칭에만 의존했습니다.
+
+### Solution
+
+`sql_search()`에 키워드 확장과 재순위를 통합했습니다.
+
+```python
+def sql_search(query, limit=5):
+    keyword = filters.get('keyword')
+
+    # 방안 1: 키워드 확장
+    expanded = expand_keyword(keyword) if keyword else None
+
+    # 확장 키워드 OR 매칭으로 후보 넉넉히 검색
+    recruits = search_recruits_by_filter(..., expanded_keywords=expanded, limit=50)
+
+    # 방안 2: 관련도 재순위 후 상위 limit건
+    recruits = rerank(keyword, recruits)
+    return format(recruits[:limit])
+```
+
+`search_recruits_by_filter()`에 `expanded_keywords` 파라미터를 추가하여
+확장 키워드 전달 시 OR 매칭, 미전달 시 기존 AND/OR 폴백 방식을 유지했습니다.
+
+---
+
+## 28. 분석 레이어 부재 — 수집 데이터에서 인사이트 추출 불가
+
+### Problem
+
+18만 건의 채용 공고 데이터가 쌓였지만 운영(OLTP) 용도로만 사용되었습니다.
+"요즘 어떤 기술 스택이 많이 뽑히나요?", "평균 연봉은 얼마인가요?" 같은 분석 질문에 답할 수 없었습니다.
+
+### Solution
+
+데이터 웨어하우스 역할의 분석 레이어를 추가했습니다.
+
+**`job_market_daily` 테이블** — 날짜별 마켓 스냅샷
+
+```sql
+CREATE TABLE job_market_daily (
+    date DATE PRIMARY KEY,
+    total_valid_jobs INTEGER,
+    new_jobs INTEGER,
+    avg_salary INTEGER,
+    top_tags JSONB,       -- 인기 태그 TOP 10
+    region_dist JSONB,    -- 지역별 분포
+    experience_dist JSONB -- 경력별 분포
+);
+```
+
+**`db/analytics.py`** — 분석 쿼리 함수 모음
+- `get_top_tags()`: 유효 공고 기준 인기 기술 스택 TOP N
+- `get_salary_by_tags()`: 키워드별 평균 연봉
+- `get_regional_dist()`: 지역별 공고 수
+- `get_experience_dist()`: 경력별 분포
+- `get_market_snapshot()`: 현황 종합
+
+**`analytics/snapshot.py`** — 일별 스냅샷 생성, `main.py`에서 크롤링 완료 후 자동 호출
+
+**Discord `!인사이트` 명령어** — 현재 채용 시장 현황을 즉시 조회
+
+```
+📊 채용 시장 현황 (2026-03-15)
+유효 공고 30,655건 | 오늘 신규 171,228건 | 전체 평균연봉 4,212만원
+
+🔥 인기 기술 스택 TOP 10
+ 1. 재고관리  1,917건  (평균 4,151만원)
+ 2. 데이터분석  1,553건
+ ...
+
+📍 지역별 공고 분포
+· 서울  15,224건
+· 경기  7,764건
+...
+```
+
+---
+
 ## 17. 소스 파일이 gitignored 디렉토리에 위치하는 문제
 
 ### Problem
@@ -763,5 +1184,112 @@ result_lines = [format_recruit(i, r, include_education=True) for i, r in enumera
 **③ 테스트 결과 파일 경로 고정 및 gitignore 추가**
 
 각 테스트 파일의 출력 경로를 `os.path.dirname(__file__)` 기준으로 고정하여 실행 위치에 무관하게 `tests/` 내부에 결과가 저장되도록 했습니다. `.gitignore`에 `tests/*.txt`를 추가하여 결과 파일이 커밋되지 않도록 했습니다. `test_snapshots.json`은 회귀 테스트 기준선이므로 커밋 대상으로 유지했습니다.
+
+---
+
+## 29. 태그 기반 검색(방안 3)의 성능 평가 — 태그가 오히려 검색 품질을 악화
+
+### Problem
+
+시맨틱 태깅(방안 3)이 실제로 검색 품질을 개선하는지 확인할 객관적 지표가 없었습니다. 기존 `evaluate_tagging.py`는 "백엔드 검색 결과에 '백엔드'가 있는가"처럼 순환 논리를 사용하여 의미 없는 수치를 산출했습니다.
+
+### Evaluation Setup
+
+**TREC-style 풀링 + 룰 기반 관련도 판정** 방식으로 재설계:
+
+- **평가 쿼리**: `tests/judge_queries.json` — 43개 수동 작성 쿼리
+  - Type A (12개): 키워드 직접형 — 통제군
+  - Type B (16개): 시맨틱형 — "Spring Boot로 API 서버 만드는 개발자"처럼 자연어
+  - Type C (12개): 모호형 — 직무가 불명확한 광범위 쿼리
+  - Type D (3개): 엣지케이스 — 부정 조건, 복합 추론
+- **후보 수집**: `tests/collect_candidates.py --no-rerank` → 480건 (`tests/candidates.json`)
+- **관련도 판정**: `tests/generate_judgments.py` — 지역/고용형태/경력/직무 키워드 매칭 규칙으로 0–3점 부여 (`tests/my_judgments.json`)
+- **지표 계산**: `tests/compute_metrics.py` → NDCG@K, P@K, Hit@K
+
+### Results
+
+**전체 지표 (baseline vs +tags)**
+
+| 지표 | baseline | +tags | Delta |
+|------|----------|-------|-------|
+| NDCG@10 | 0.7534 | 0.6572 | **-0.0961** |
+| P@10 | 0.6024 | 0.5190 | -0.0833 |
+| Hit@10 | 0.9048 | 0.8810 | -0.0238 |
+
+**쿼리 유형별 NDCG@10**
+
+| 유형 | baseline | +tags | Delta |
+|------|----------|-------|-------|
+| A (키워드 직접형) | 0.7844 | 0.8681 | **+0.0837** |
+| B (시맨틱형) | 0.6630 | 0.4842 | **-0.1788** |
+| C (모호형) | 0.9528 | 0.7770 | **-0.1758** |
+| D (엣지케이스) | 0.2832 | 0.1997 | -0.0836 |
+
+### Root Cause
+
+**① 태그 AND 조건 과도 적용 — 결과 과소 반환**
+
+C11 "경기 제조 생산 공장 경력 무관 신입": +tags 모드는 "제조", "생산", "공장" 세 토큰이 모두 AND 매칭되는 공고만 반환 → 1건 (NDCG 0.9938 → 0.0). baseline은 `announcement_name` OR 조건으로 9건의 관련 공고를 찾습니다.
+
+**② 태그 의미 범위 과도 확장 — 노이즈 유입**
+
+B05 "파이썬으로 데이터 분석하는 직무 서울 경기": +tags 상위에 "글로벌 크리에이티브 매니저", "피부과의원 컨설팅" 등 완전 무관한 공고가 노출. "데이터", "분석" 태그가 본래 의도와 다른 직군에도 붙어 있어 노이즈가 상위로 올라옵니다. (NDCG 0.8928 → 0.1175, -87%)
+
+**③ 시스템 구조적 한계**
+
+D01 "SI 업체 말고 자사 서비스 개발하는 백엔드 신입 서울": 부정 조건 처리 불가. 두 모드 모두 백엔드 개발자 공고를 단 하나도 반환하지 못함 (NDCG 0.0).
+
+### Solution (미완)
+
+1. **태그 매칭 AND → OR 완화** — 다단어 쿼리에서 토큰 전부 AND 매칭 대신 OR 또는 majority 조건 적용
+2. **태그 품질 점검** — "데이터 분석", "제조/생산" 직군의 태그가 올바른 공고에만 부착되어 있는지 검토
+3. **태그 가중치 조정** — 태그 일치를 title 일치보다 낮은 점수로 처리하여 노이즈 억제
+4. **재순위(방안 2) 보완 효과 검증** — 이번 평가는 `--no-rerank` 조건. `collect_candidates.py` (rerank 포함)로 재실행 후 동일 지표 계산 필요
+
+---
+
+
+## 30. 태그 검색 JOIN 쿼리 풀스캔 — 2,869ms → 4ms
+
+### Problem
+
+태그(`tags.name`)로 공고를 검색할 때 응답이 약 2~3초 걸렸습니다. 공고명 검색은 수십 ms인데 태그 검색만 유독 느렸습니다.
+
+### Cause
+
+`EXPLAIN ANALYZE`로 실행 계획을 확인한 결과, 병목이 두 곳에 있었습니다.
+
+**1차 병목 — `recruit_tags` 110만 행 풀스캔**
+
+```
+Parallel Seq Scan on recruit_tags  (actual time=1,311ms, rows=368,521 × 3 workers)
+```
+
+`recruit_tags`의 기존 인덱스는 복합 PK `(recruit_id, tag_id)` 하나뿐이었습니다.
+B-tree 인덱스는 왼쪽 컬럼부터만 활용되므로, 태그 → 공고 방향(`tag_id`만으로 검색)에서는 인덱스를 전혀 사용하지 못해 매번 전체를 풀스캔했습니다.
+
+**2차 병목 — `tags.name` 풀스캔**
+
+`recruit_tags` 병목을 제거하자 이번엔 `tags.name ILIKE` 조건의 24,861행 풀스캔(33ms)이 새 병목으로 드러났습니다.
+
+### Solution
+
+두 인덱스를 순차적으로 추가했습니다.
+
+```sql
+-- 1단계: tag_id 단독 인덱스 → recruit_tags 풀스캔 제거
+CREATE INDEX idx_recruit_tags_tag_id ON recruit_tags(tag_id);
+
+-- 2단계: tags.name trigram GIN → ILIKE 부분 문자열 검색 최적화
+CREATE INDEX idx_tags_name_trgm ON tags USING gin(name gin_trgm_ops);
+```
+
+| 단계 | 실행 계획 | 실행 시간 |
+|------|----------|---------|
+| 인덱스 없음 | recruit_tags 110만 행 Parallel Seq Scan | **2,869ms** |
+| tag_id 인덱스 추가 | Bitmap Index Scan on recruit_tags | **35ms** |
+| tags trigram 인덱스 추가 | Bitmap Index Scan on tags + recruit_tags | **4ms** |
+
+각 단계에서 `EXPLAIN ANALYZE`로 병목 위치를 특정하고, 인덱스를 하나씩 추가하며 효과를 검증했습니다.
 
 ---

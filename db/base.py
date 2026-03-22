@@ -77,6 +77,20 @@ def create_tables(conn, cursor):
     try:
         logging.info("테이블 생성 시작")
 
+        # 고용형태 차원 테이블
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS employment_types (
+            id INTEGER PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL
+        );
+        """)
+        cursor.executemany("""
+            INSERT INTO employment_types (id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING
+        """, [
+            (1,'정규직'),(2,'계약직'),(3,'인턴'),(4,'파견직'),(5,'프리랜서'),
+            (6,'위촉직'),(7,'도급'),(8,'연수생'),(9,'병역특례'),(10,'아르바이트'),
+        ])
+
         # 지역 대분류
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS regions (
@@ -111,8 +125,9 @@ def create_tables(conn, cursor):
             announcement_name TEXT,
             experience INTEGER,
             education INTEGER,
-            form INTEGER,
+            form INTEGER REFERENCES employment_types(id),
             subregion_id INTEGER REFERENCES subregions(id),
+            region_id INTEGER REFERENCES regions(id),
             annual_salary INTEGER,
             deadline DATE,
             link TEXT,
@@ -141,6 +156,60 @@ def create_tables(conn, cursor):
         cursor.execute("""
         ALTER TABLE recruits
         ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()
+        """)
+
+        # recruits.region_id 마이그레이션 (기존 테이블 대응)
+        cursor.execute("""
+        ALTER TABLE recruits
+        ADD COLUMN IF NOT EXISTS region_id INTEGER REFERENCES regions(id)
+        """)
+
+        # region_id 자동 동기화 트리거: subregion_id 변경 시 region_id를 항상 일치시킴
+        cursor.execute("""
+        CREATE OR REPLACE FUNCTION sync_region_id()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            IF NEW.subregion_id IS NOT NULL THEN
+                SELECT region_id INTO NEW.region_id
+                FROM subregions
+                WHERE id = NEW.subregion_id;
+            ELSE
+                NEW.region_id := NULL;
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        """)
+        cursor.execute("""
+        DO $$ BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sync_region_id'
+            ) THEN
+                CREATE TRIGGER trg_sync_region_id
+                BEFORE INSERT OR UPDATE OF subregion_id ON recruits
+                FOR EACH ROW EXECUTE FUNCTION sync_region_id();
+            END IF;
+        END $$;
+        """)
+
+        # region_id 역방향 채우기: 트리거 이전에 삽입된 기존 공고 대응
+        cursor.execute("""
+        UPDATE recruits r
+        SET region_id = s.region_id
+        FROM subregions s
+        WHERE r.subregion_id = s.id AND r.region_id IS NULL
+        """)
+
+        # recruits.form FK 마이그레이션 (기존 테이블 대응)
+        cursor.execute("""
+        DO $$ BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'fk_recruits_form'
+            ) THEN
+                ALTER TABLE recruits ADD CONSTRAINT fk_recruits_form
+                FOREIGN KEY (form) REFERENCES employment_types(id);
+            END IF;
+        END $$;
         """)
 
         # 알림 발송 이력
@@ -192,6 +261,19 @@ def create_tables(conn, cursor):
         """)
 
         cursor.execute("""
+        CREATE TABLE IF NOT EXISTS job_market_daily (
+            date DATE PRIMARY KEY,
+            total_valid_jobs INTEGER,
+            new_jobs INTEGER,
+            avg_salary INTEGER,
+            top_tags JSONB,
+            region_dist JSONB,
+            experience_dist JSONB,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+        """)
+
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_user_sub_user_id
             ON user_subscriptions(discord_user_id)
         """)
@@ -201,12 +283,16 @@ def create_tables(conn, cursor):
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_form        ON recruits(form)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_experience  ON recruits(experience)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_salary      ON recruits(annual_salary)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_region_id   ON recruits(region_id)")
         # 복합 인덱스: 가장 빈번한 필터 조합 (deadline 필수 + form/experience)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline_form ON recruits(deadline, form)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_deadline_exp  ON recruits(deadline, experience)")
-        # 공고명 ILIKE 검색용 trigram 인덱스 (pg_trgm 필요)
+        # ILIKE 검색용 trigram 인덱스 (pg_trgm 필요)
         cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruits_name_trgm ON recruits USING gin(announcement_name gin_trgm_ops)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags_name_trgm ON tags USING gin(name gin_trgm_ops)")
+        # 태그 → 공고 방향 JOIN 인덱스 (tag_id 단독 인덱스 없으면 recruit_tags 풀스캔 발생)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_recruit_tags_tag_id ON recruit_tags(tag_id)")
 
         logging.info("테이블 생성 완료")
     except Exception as e:
@@ -243,12 +329,15 @@ def ensure_tables():
         release_connection(conn)
 
 
-def batch_to_db(data_batch):
+def batch_to_db(data_batch, use_llm_tagging: bool = False):
     """크롤링된 배치 데이터를 직접 DB에 삽입.
-    data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, position, link] 리스트의 리스트."""
+    data_batch는 [company, title, career, education, emp_type, location, salary, deadline, description, position, link] 리스트의 리스트.
+    use_llm_tagging=True 이면 신규 삽입된 공고에 EXAONE 의미 태그를 추가로 부여한다.
+    """
     conn = connect_postgres()
     batch_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     quality_events = []
+    new_recruit_ids = []
 
     try:
         cursor = conn.cursor()
@@ -274,7 +363,7 @@ def batch_to_db(data_batch):
                 if exp_rule:
                     quality_events.append((batch_id, company, title, 'experience', exp_rule, career, str(parsed_experience)))
 
-                _jobkorea_write(
+                recruit_id = _jobkorea_write(
                     conn=conn,
                     cursor=cursor,
                     company_name=company,
@@ -288,6 +377,8 @@ def batch_to_db(data_batch):
                     tags=all_tags or None,
                     link=link,
                 )
+                if recruit_id:
+                    new_recruit_ids.append(recruit_id)
             except Exception as e:
                 conn.rollback()
                 logging.warning(f"배치 {i}번째 행 처리 실패: {e}")
@@ -302,10 +393,27 @@ def batch_to_db(data_batch):
             conn.commit()
             logging.info(f"데이터 품질 이벤트 {len(quality_events)}건 기록 (batch_id={batch_id})")
 
+        # 신규 공고 LLM 태깅
+        if use_llm_tagging and new_recruit_ids:
+            from db.tagger import tag_recruit_batch
+            stats = tag_recruit_batch(new_recruit_ids)
+            logging.info(f"LLM 태깅 완료: 태깅됨={stats['tagged']} / 변화없음={stats['skipped']} / 실패={stats['failed']}")
+
     finally:
         release_connection(conn)
 
-def csv_to_db(csv_path):
+def csv_to_db(csv_path, today=None):
+    """CSV 파일을 DB에 적재.
+    today: parse_deadline 기준 날짜. 미지정 시 파일명에서 추출, 그것도 없으면 현재 날짜.
+    """
+    import re as _re
+    from datetime import date as _date
+
+    if today is None:
+        m = _re.search(r'(\d{4})-(\d{2})-(\d{2})', csv_path)
+        if m:
+            today = _date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+
     conn = connect_postgres()
     try:
         cursor = conn.cursor()
@@ -316,7 +424,6 @@ def csv_to_db(csv_path):
             reader = csv.DictReader(csvfile)
             for i, row in enumerate(reader):
                 try:
-                    logging.info(f"{i}번째 행 입력")
                     _jobkorea_write(
                         conn=conn,
                         cursor=cursor,
@@ -327,7 +434,7 @@ def csv_to_db(csv_path):
                         form=JobPreprocessor.parse_form(row['형태']),
                         region=JobPreprocessor.parse_region(row['지역']),
                         annual_salary=JobPreprocessor.parse_salary(row['연봉']),
-                        deadline=JobPreprocessor.parse_deadline(row['마감일']),
+                        deadline=JobPreprocessor.parse_deadline(row['마감일'], today=today),
                         tags=JobPreprocessor.parse_explanation(row['설명']),
                         link=row['링크'],
                     )
@@ -417,7 +524,7 @@ def _jobkorea_write(
     # 1. 회사 ID 확보
     company_id = _ensure_company_and_get_id(cursor, company_name)
 
-    # 2. 지역 ID 확보
+    # 2. 지역 ID 확보 (region_id는 트리거가 subregion_id로부터 자동 세팅)
     if region and isinstance(region, tuple) and len(region) == 2 and region[1]:
         region_name, subregion_name = region
         subregion_id = _ensure_subregion_and_get_id(cursor, region_name, subregion_name)
@@ -464,6 +571,8 @@ def _jobkorea_write(
                     ON CONFLICT DO NOTHING
                 """, (recruit_id, tag_id))
     else:
+        recruit_id = None
         logging.info(f"[SKIPPED - DUPLICATE] {company_name} / {announcement_name} / {deadline} 은 이미 존재하여 삽입되지 않았습니다.")
 
     conn.commit()
+    return recruit_id

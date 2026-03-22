@@ -3,7 +3,7 @@ import os
 import logging
 from discord.ext import tasks
 from dotenv import load_dotenv
-from discord_bot.llm import sql_search, extract_filters
+from discord_bot.llm import sql_search, sql_search_baseline, extract_filters
 from discord_bot.notifier import notify_subscribers
 from discord_bot.views import SubscriptionView, _describe_profile
 from db.base import ensure_tables
@@ -59,11 +59,55 @@ async def on_message(message):
             "`!내구독` — 공통 필터 + 키워드 구독 목록 확인\n"
             "`!구독해제 <번호>` — 특정 키워드 구독 해제 (번호는 `!내구독` 참고)\n"
             "`!구독해제 전체` — 모든 키워드 구독 해제\n"
-            "`!알림테스트` — 지금 즉시 알림 조건 확인 및 DM 발송\n\n"
+            "`!알림테스트` — 지금 즉시 알림 조건 확인 및 DM 발송\n"
+            "`!인사이트` — 현재 채용 시장 현황 (인기 스택, 지역 분포, 평균 연봉)\n"
+            "`!ab <쿼리>` — A(baseline) vs B(현재 방식) 결과 나란히 비교\n\n"
             "**🔍 공고 검색**\n"
-            "명령어 없이 자연어로 입력하면 공고를 검색합니다.\n"
-            "예) `백엔드 서울 정규직 신입`, `카카오 공고`, `연봉 5000만원 이상`"
+            "명령어 없이 자연어로 입력하면 공고를 검색합니다.\n\n"
+            "**검색 팁** — 공고 제목에 실제로 나오는 단어를 쓸수록 정확도가 높아집니다.\n"
+            "✅ 좋은 예) `백엔드 개발자 서울 정규직`, `데이터 분석 경기 신입`, `바리스타 연봉 3000`\n"
+            "❌ 피할 예) `Spring Boot로 API 서버 만드는 개발자` (자연어 설명보다 직무명 키워드 권장)\n\n"
+            "인식되는 조건: 지역 / 고용형태(정규직·계약직 등) / 경력(신입·N년) / 연봉 / 회사명"
         )
+        return
+
+    # ── !인사이트 ──────────────────────────────────────────
+    if content.startswith("!인사이트"):
+        await message.channel.send("📊 채용 시장 분석 중...")
+        try:
+            from db.analytics import get_market_snapshot, get_salary_by_tags
+            snap = get_market_snapshot()
+
+            # 인기 태그 TOP 5 기준 연봉 조회
+            top_kws = [t["name"] for t in snap["top_tags"][:5]]
+            salary_data = get_salary_by_tags(top_kws)
+            salary_map = {s["keyword"]: s["avg_salary"] for s in salary_data}
+
+            lines = [f"**📊 채용 시장 현황 ({snap['date']})**\n"]
+
+            lines.append(f"**유효 공고** {snap['total_valid_jobs']:,}건  |  **오늘 신규** {snap['new_jobs_today']:,}건  |  **전체 평균연봉** {snap['avg_salary']:,}만원\n")
+
+            lines.append("**🔥 인기 기술 스택 TOP 10**")
+            for i, t in enumerate(snap["top_tags"], 1):
+                sal = f"  _(평균 {salary_map[t['name']]:,}만원)_" if t["name"] in salary_map else ""
+                lines.append(f"`{i:>2}.` {t['name']}  **{t['count']:,}건**{sal}")
+
+            lines.append("\n**📍 지역별 공고 분포**")
+            for r in snap["region_dist"]:
+                lines.append(f"· {r['region']}  {r['count']:,}건")
+
+            lines.append("\n**🎓 경력별 분포**")
+            for e in snap["experience_dist"]:
+                lines.append(f"· {e['label']}  {e['count']:,}건")
+
+            msg = "\n".join(lines)
+            if len(msg) > 1900:
+                for chunk in [msg[i:i+1900] for i in range(0, len(msg), 1900)]:
+                    await message.channel.send(chunk)
+            else:
+                await message.channel.send(msg)
+        except Exception as e:
+            await message.channel.send(f"❌ 인사이트 조회 실패: {str(e)}")
         return
 
     # ── !알림테스트 ────────────────────────────────────────
@@ -123,10 +167,32 @@ async def on_message(message):
         )
         return
 
+    # ── !ab A/B 비교 ──────────────────────────────────────
+    if content.startswith("!ab "):
+        query = content[4:].strip()
+        if not query:
+            await message.channel.send("`!ab 쿼리` 형식으로 입력하세요. 예) `!ab 백엔드 서울 정규직`")
+            return
+        await message.channel.send(f"🔬 **A/B 비교 중...** `{query}`")
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            result_a, result_b = await asyncio.gather(
+                loop.run_in_executor(None, lambda: sql_search_baseline(query, limit=5)),
+                loop.run_in_executor(None, lambda: sql_search(query, limit=5)),
+            )
+            await message.channel.send(f"**[A] Baseline** (SQL AND, 재순위 없음)\n\n{result_a}")
+            await message.channel.send(f"**[B] Current** (adaptive 확장 + 재순위)\n\n{result_b}")
+        except Exception as e:
+            await message.channel.send(f"오류 발생: {str(e)}")
+        return
+
     # ── 일반 검색 쿼리 ────────────────────────────────────
     await message.channel.send("잠시만 기다려 주세요...")
     try:
-        response = sql_search(content, limit=5)
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, lambda: sql_search(content, limit=5))
         if len(response) > 1900:
             chunks = [response[i:i + 1900] for i in range(0, len(response), 1900)]
             for chunk in chunks:

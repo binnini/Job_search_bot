@@ -151,12 +151,17 @@ def extract_filters(query: str) -> dict:
     return filters
 
 
-def sql_search(query, limit=5):
+ADAPTIVE_THRESHOLD = 3  # AND 결과가 이 미만이면 LLM 확장 OR 매칭으로 fallback
+
+
+def sql_search_baseline(query, limit=5):
+    """순수 SQL AND 매칭 — LLM 확장·재순위 없음. A/B 비교용."""
     filters = extract_filters(query)
+    keyword = filters.get('keyword')
     form_code = JobPreprocessor.parse_form(filters.get('form') or '')
 
     recruits = search_recruits_by_filter(
-        keyword=filters.get('keyword'),
+        keyword=keyword,
         min_deadline=filters.get('min_deadline'),
         min_annual_salary=filters.get('min_annual_salary'),
         company_name=filters.get('company_name'),
@@ -169,5 +174,51 @@ def sql_search(query, limit=5):
     if not recruits:
         return "조건에 맞는 채용 공고를 찾지 못했습니다."
 
-    result_lines = [format_recruit(i, r, include_education=True) for i, r in enumerate(recruits, start=1)]
+    result_lines = [format_recruit(i, r, include_education=True) for i, r in enumerate(recruits[:limit], start=1)]
+    return "\n\n".join(result_lines)
+
+
+def sql_search(query, limit=5):
+    from discord_bot.keyword_expander import expand_keyword
+    from discord_bot.reranker import rerank
+
+    filters = extract_filters(query)
+    keyword = filters.get('keyword')
+    form_code = JobPreprocessor.parse_form(filters.get('form') or '')
+
+    # 1차: 일반 AND 매칭 (db/io.py 내부 OR fallback 포함)
+    recruits = search_recruits_by_filter(
+        keyword=keyword,
+        min_deadline=filters.get('min_deadline'),
+        min_annual_salary=filters.get('min_annual_salary'),
+        company_name=filters.get('company_name'),
+        max_experience=filters.get('max_experience'),
+        form=form_code,
+        region=filters.get('region'),
+        limit=max(limit * 5, 50),
+    )
+
+    # 2차: 결과 부족 시 LLM 쿼리 확장 → OR 매칭 (어휘 불일치 해소)
+    if len(recruits) < ADAPTIVE_THRESHOLD and keyword:
+        expanded = expand_keyword(keyword)
+        recruits = search_recruits_by_filter(
+            keyword=keyword,
+            min_deadline=filters.get('min_deadline'),
+            min_annual_salary=filters.get('min_annual_salary'),
+            company_name=filters.get('company_name'),
+            max_experience=filters.get('max_experience'),
+            form=form_code,
+            region=filters.get('region'),
+            limit=max(limit * 5, 50),
+            expanded_keywords=expanded,
+        )
+
+    if not recruits:
+        return "조건에 맞는 채용 공고를 찾지 못했습니다."
+
+    # 방안 2: 재순위 후 상위 limit건
+    if keyword and len(recruits) > 1:
+        recruits = rerank(keyword, recruits)
+
+    result_lines = [format_recruit(i, r, include_education=True) for i, r in enumerate(recruits[:limit], start=1)]
     return "\n\n".join(result_lines)

@@ -123,7 +123,7 @@ def crawl_jobkorea_multiple_pages(days: int = 1):
                 break
 
             if current_page % SAVE_CNT == 0:
-                batch_to_db(data_batch)
+                batch_to_db(data_batch, use_llm_tagging=True)
                 logging.info(f"✅ {SAVE_CNT}페이지마다 DB 저장 완료 (총 {total_items}건)")
                 data_batch.clear()
 
@@ -151,7 +151,7 @@ def crawl_jobkorea_multiple_pages(days: int = 1):
                     break
 
         if data_batch:
-            batch_to_db(data_batch)
+            batch_to_db(data_batch, use_llm_tagging=True)
             logging.info(f"📝 마지막 데이터 DB 저장 완료 (총 {total_items}건)")
 
     finally:

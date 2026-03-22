@@ -155,18 +155,15 @@ def generate_quality_report() -> str:
 
         # ── 4. 고용형태 분포 ─────────────────────────────────────
         lines.append("\n[4. 고용형태 분포]")
-        form_map = {1:'정규직',2:'계약직',3:'인턴',4:'파견직',5:'프리랜서',
-                    6:'위촉직',7:'도급',8:'연수생',9:'병역특례',10:'아르바이트'}
         cur.execute("""
-            SELECT form, COUNT(*) AS cnt
-            FROM recruits
-            WHERE form IS NOT NULL
-            GROUP BY form
+            SELECT et.name, COUNT(r.id) AS cnt
+            FROM employment_types et
+            JOIN recruits r ON r.form = et.id
+            GROUP BY et.id, et.name
             ORDER BY cnt DESC
         """)
-        for form_code, cnt in cur.fetchall():
-            label = form_map.get(form_code, f"기타({form_code})")
-            lines.append(f"  {label}: {cnt:,}건")
+        for name, cnt in cur.fetchall():
+            lines.append(f"  {name}: {cnt:,}건")
 
         # ── 5. 데이터 품질 이벤트 요약 ───────────────────────────
         lines.append("\n[5. 데이터 품질 이벤트 (data_quality_log)]")

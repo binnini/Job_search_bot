@@ -1,12 +1,12 @@
 import pandas as pd
-from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, UserProfile, NotificationLog
+from .models import Recruit, Subregion, RecruitOut, Tag, Company, Region, UserSubscription, UserProfile, NotificationLog, EmploymentType
 from .JobPreprocessor import JobPreprocessor
 from datetime import date, datetime, timedelta
 from dataclasses import dataclass
 import logging
 from dotenv import load_dotenv
 import os
-from sqlalchemy import create_engine, or_
+from sqlalchemy import create_engine, or_, and_
 from sqlalchemy.orm import sessionmaker, joinedload
 from typing import List, Optional
 
@@ -21,7 +21,7 @@ DATABASE_URL = (
     f"@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
 )
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
@@ -44,7 +44,7 @@ def _to_recruit_out(r: Recruit) -> RecruitOut:
         education=r.education,
         form=r.form,
         tags=[tag.name for tag in r.tags],
-        region_name=r.subregion.region.name if r.subregion and r.subregion.region else None,
+        region_name=r.region.name if r.region else None,
     )
 
 
@@ -60,7 +60,7 @@ def read_recruitOut(limit: int = 10000, order_desc: bool = False) -> List[Recrui
             session.query(Recruit)
             .options(
                 joinedload(Recruit.company),
-                joinedload(Recruit.subregion).joinedload(Subregion.region)
+                joinedload(Recruit.region),
             )
             .filter(Recruit.deadline >= today)
         )
@@ -85,6 +85,8 @@ def search_recruits_by_filter(
     form: int = None,
     region: str = None,
     limit: int = 5,
+    expanded_keywords: list = None,
+    use_tags: bool = True,
 ) -> List[RecruitOut]:
     today = date.today()
     session = SessionLocal()
@@ -94,27 +96,35 @@ def search_recruits_by_filter(
                 session.query(Recruit)
                 .options(
                     joinedload(Recruit.company),
-                    joinedload(Recruit.subregion).joinedload(Subregion.region),
+                    joinedload(Recruit.region),
                     joinedload(Recruit.tags),
                 )
                 .filter(Recruit.deadline >= today)
             )
-            if keyword:
+            if expanded_keywords:
+                # 확장 키워드 OR 매칭: 하나라도 공고명·태그에 포함되면 통과
+                q = q.filter(or_(*[
+                    or_(
+                        Recruit.announcement_name.ilike(f"%{kw}%"),
+                        Recruit.tags.any(Tag.name.ilike(f"%{kw}%")),
+                    )
+                    for kw in expanded_keywords
+                ]))
+            elif keyword:
                 tokens = keyword.split()
                 if keyword_mode == 'and':
                     for token in tokens:
-                        q = q.filter(or_(
-                            Recruit.announcement_name.ilike(f"%{token}%"),
-                            Recruit.tags.any(Tag.name.ilike(f"%{token}%")),
-                        ))
+                        cond = Recruit.announcement_name.ilike(f"%{token}%")
+                        if use_tags:
+                            cond = or_(cond, Recruit.tags.any(Tag.name.ilike(f"%{token}%")))
+                        q = q.filter(cond)
                 else:  # 'or' 폴백
-                    q = q.filter(or_(*[
-                        or_(
-                            Recruit.announcement_name.ilike(f"%{token}%"),
-                            Recruit.tags.any(Tag.name.ilike(f"%{token}%")),
-                        )
-                        for token in tokens
-                    ]))
+                    name_conditions = [Recruit.announcement_name.ilike(f"%{token}%") for token in tokens]
+                    if use_tags:
+                        tag_conditions = [Recruit.tags.any(Tag.name.ilike(f"%{token}%")) for token in tokens]
+                        q = q.filter(or_(*name_conditions, *tag_conditions))
+                    else:
+                        q = q.filter(or_(*name_conditions))
             if min_deadline:
                 q = q.filter(Recruit.deadline >= min_deadline)
             if min_annual_salary:
@@ -129,16 +139,18 @@ def search_recruits_by_filter(
                 q = q.filter(Recruit.form == form)
             if region:
                 q = (
-                    q.join(Recruit.subregion)
-                    .join(Subregion.region)
+                    q.join(Recruit.region)
                     .filter(Region.name.ilike(f"%{region}%"))
                 )
             return q
 
         results = _build_query('and').order_by(Recruit.id.desc()).limit(limit).all()
 
-        # AND 결과 없고 키워드가 여러 토큰이면 OR 폴백
-        if not results and keyword and len(keyword.split()) > 1:
+        # AND 결과 부족 시 OR 폴백 (expanded_keywords 미사용, 멀티토큰 키워드 한정)
+        # use_tags=True: 결과 3건 미만이면 폴백 (태그 AND 과적용으로 빈 결과 방지)
+        # use_tags=False: 결과 0건일 때만 폴백 (기존 동작 유지)
+        fallback_threshold = 3 if use_tags else 1
+        if len(results) < fallback_threshold and not expanded_keywords and keyword and len(keyword.split()) > 1:
             results = _build_query('or').order_by(Recruit.id.desc()).limit(limit).all()
 
         return [_to_recruit_out(r) for r in results]
@@ -153,7 +165,7 @@ def read_recruits_by_ids(recruit_ids: List[int]) -> List[RecruitOut]:
             session.query(Recruit)
             .options(
                 joinedload(Recruit.company),
-                joinedload(Recruit.subregion).joinedload(Subregion.region)
+                joinedload(Recruit.region),
             )
             .filter(Recruit.id.in_(recruit_ids))
             .all()
@@ -172,7 +184,7 @@ def get_new_recruits(hours: int = 24) -> List[RecruitOut]:
             session.query(Recruit)
             .options(
                 joinedload(Recruit.company),
-                joinedload(Recruit.subregion).joinedload(Subregion.region),
+                joinedload(Recruit.region),
                 joinedload(Recruit.tags),
             )
             .filter(Recruit.created_at >= since)
